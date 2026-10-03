@@ -1,0 +1,36 @@
+.cmp-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cmp-chip {
+  flex: none; white-space: nowrap; height: 44px; padding: 0 14px; border-radius: 22px;
+  font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line-2); background: #fff; color: var(--ink-3);
+}
+.cmp-chip span { font-size: 12px; font-weight: 500; opacity: .8; }
+.cmp-chip.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.cmp-chip.off { background: oklch(0.97 0.003 262); color: oklch(0.65 0.01 262); cursor: not-allowed; }
+.cmp-chip.off, .cmp-chip.full { opacity: .55; }
+.cmp-count { font-size: 12px; color: var(--muted-2); }
+.cmp-base { margin-top: -8px; font-size: 13px; color: oklch(0.45 0.02 262); }
+.cmp-base b { color: var(--primary); }
+
+.cmp-info { display: flex; gap: 10px; align-items: flex-start; background: oklch(0.97 0.018 262); border: 1px solid oklch(0.91 0.03 262); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.55; word-break: keep-all; }
+.cmp-info i { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; font-style: normal; display: flex; align-items: center; justify-content: center; }
+
+/* 좁은 화면에서는 표를 가로 스크롤하고 항목 열을 고정한다 */
+.cmp-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.cmp-table { width: 100%; min-width: calc(96px + var(--cols) * 140px); border-collapse: separate; border-spacing: 0; table-layout: fixed; text-align: left; }
+.cmp-table th, .cmp-table td { border-bottom: 1px solid var(--line-soft); padding: 0; font-weight: inherit; }
+.cmp-table thead th, .cmp-table thead td { border-bottom-color: var(--line); }
+.cmp-table tbody tr:last-child > * { border-bottom: none; }
+.cmp-table tr > :first-child { position: sticky; left: 0; z-index: 2; width: 96px; background: #fff; box-shadow: 1px 0 0 var(--line); }
+.cmp-table tbody th { background: oklch(0.985 0.003 262); padding: 14px 12px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.cmp-table tbody th span { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--muted-2); }
+.cmp-table thead a { display: flex; flex-direction: column; gap: 3px; padding: 16px; color: inherit; font-size: 12px; }
+.cmp-table thead a span { color: var(--muted); }
+.cmp-table thead a b { font-size: 16px; }
+.cmp-cell { padding: 14px 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
+.cmp-cell.score { font-size: 22px; font-weight: 800; color: var(--primary); }
+.cmp-cell.dash { font-weight: 400; color: var(--muted-2); }
+.cmp-best { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; background: var(--primary-soft); color: var(--primary); }
+@media (min-width: 900px) {
+  .cmp-table tr > :first-child { width: 112px; }
+}
