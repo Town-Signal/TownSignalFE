@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
-import { fmt } from '../../lib/format';
+import { fmt, requestIdText } from '../../lib/format';
 import { useApiError } from '../../hooks/useApiError';
-import { simulatedFailure } from '../../lib/errors';
+import { simulatedFailure, toApiError } from '../../lib/errors';
 import { MobileHeader } from '../../components/Layout';
+import { BoxMsg } from '../../components/ui';
 import Step1Input from './Step1Input';
 import Step2Gu from './Step2Gu';
 import Step3Dong from './Step3Dong';
@@ -145,42 +146,48 @@ export default function Recommend() {
     if (loading) { runId.current += 1; setLoading(null); } else if (step > 1) go(step - 1);
   };
 
-  // 새로고침 · 대시보드 '전체 결과 보기'로 2 · 3단계에 바로 들어온 경우 — 저장된 rec_id로 복원한다
-  const restoring = useRef(false);
+  // 새로고침 · 대시보드 '전체 결과 보기'로 2 · 3단계에 바로 들어온 경우 — 저장된 rec_id로 복원한다.
+  // 취소는 effect cleanup(alive)으로만 한다. StrictMode의 effect 재실행 · 단계 이동에도 로딩이 남지 않게.
+  const [restoreError, setRestoreError] = useState(null);
+  const [restoreTry, setRestoreTry] = useState(0);
+  const needRestore = step !== 1 && !loading && !(budget && (step === 2 || rec));
+  const restoreId = budget?.rec_id ?? last?.rec_id ?? null;
   useEffect(() => {
-    if (step === 1 || restoring.current || loading) return;
-    if (budget && (step === 2 || rec)) return;
-    const recId = budget?.rec_id ?? last?.rec_id;
-    if (!recId) { go(1); return; }
-    restoring.current = true;
-    const id = ++runId.current;
+    if (!needRestore) return undefined;
+    if (!restoreId) { go(1); return undefined; } // 저장된 결과가 없으면 1단계로
+    let alive = true;
+    setRestoreError(null);
     (async () => {
       try {
-        let data = budget;
-        if (!data) {
-          const snap = (await api(`/recommendations/${recId}`)).data; // ⑤
-          data = {
+        if (!budget) {
+          const snap = (await api(`/recommendations/${restoreId}`)).data; // ⑤
+          if (!alive) return;
+          setBudget({
             rec_id: snap.rec_id, base_quarter: snap.base_quarter, own_capital: snap.input_condition.capital,
             degraded: snap.degraded, summary: snap.summary, district_budgets: snap.district_budgets,
-          };
-          if (id !== runId.current) return;
-          setBudget(data);
+          });
         }
         if (step === 3) {
           // ⑤ items에는 점수 분해가 없어 ④를 같은 rec_id로 다시 실행해 복원한다(같은 결과를 다시 저장)
-          const json = await api('/recommendations', { method: 'POST', body: { rec_id: recId, top_k: TOP_K } });
-          if (id !== runId.current) return;
+          const json = await api('/recommendations', { method: 'POST', body: { rec_id: restoreId, top_k: TOP_K } });
+          if (!alive) return;
           setRec(json.data);
         }
       } catch (e) {
-        if (id !== runId.current) return;
-        handleError(e); // REC_NOT_FOUND면 ts-last의 rec_id만 지운다
-        go(1);
-      } finally {
-        restoring.current = false;
+        if (!alive) return;
+        const err = toApiError(e);
+        if (err.code === 'REC_NOT_FOUND') {
+          handleError(err); // ts-last의 rec_id만 지운다
+          go(1);
+        } else {
+          setRestoreError(err); // 화면 안에 오류 문구 + 다시 시도
+        }
       }
     })();
-  }, [step, budget, rec, last?.rec_id, loading, go, handleError]);
+    return () => { alive = false; };
+    // budget은 ⑤로 채운 뒤 ④만 이어서 부르므로 의존성에서 뺀다(채우는 순간 진행 중인 ④를 취소하지 않게)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needRestore, restoreId, step, restoreTry, go, handleError]);
 
   const condLine = `${age}세 · 자본금 ${fmt(capital)}만 원 · ${sub}`;
   const ctaLabel = loading ? (loading.to === 2 ? '지원금 계산 중…' : '동네 찾는 중…') : step === 1 ? '지원금 계산하기' : `${passCount}개 구에서 동네 추천받기`;
@@ -210,7 +217,17 @@ export default function Recommend() {
         </ol>
 
         <div key={step} className={`rec-step ${dir ? `slide-${dir}` : ''}`}>
-          {!ready && <div className="card rec-restoring" role="status">최근 추천 결과를 불러오는 중…</div>}
+          {!ready && (restoreError ? (
+            <div className="card rec-restoring">
+              <BoxMsg
+                title="최근 추천 결과를 불러오지 못했어요"
+                desc={`잠시 후 다시 시도해 주세요.${requestIdText(restoreError)}`}
+                onRetry={() => setRestoreTry((n) => n + 1)}
+              />
+            </div>
+          ) : (
+            <div className="card rec-restoring" role="status">최근 추천 결과를 불러오는 중…</div>
+          ))}
           {step === 1 && (
             <Step1Input
               cond={cond} setCond={editCond} errors={fieldErrors} ageBad={ageBad} ctaOff={ctaOff} onNext={next}
