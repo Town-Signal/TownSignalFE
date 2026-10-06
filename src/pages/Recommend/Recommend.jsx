@@ -119,7 +119,7 @@ export default function Recommend() {
         setRec(json.data);
         setLast(toLast({
           recId: json.data.rec_id, industryCode: json.data.industry_code, sub: json.data.industry_name,
-          eligibleCount: passCount, recommendations: json.data.recommendations, guView,
+          eligibleCount: passCount, recommendations: json.data.recommendations, districtBudgets: budget.district_budgets,
         }));
       }
       await wait(Math.max(0, LOAD_DONE - (Date.now() - started)));

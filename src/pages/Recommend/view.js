@@ -153,8 +153,8 @@ export function sortDongs(list, key) {
     || a.code.localeCompare(b.code));
 }
 
-/** ④ 성공 → ts-last(10.7). margins(구 이름 → 만 원)는 아직 목업인 상세 · 비교용 임시 값(F3에서 정리) */
-export function toLast({ recId, industryCode, sub, eligibleCount, recommendations, guView }) {
+/** ④ 성공 → ts-last(10.7). margins = { district_code: budget_margin(원) | null(확인불가) } */
+export function toLast({ recId, industryCode, sub, eligibleCount, recommendations, districtBudgets }) {
   const now = new Date();
   return {
     rec_id: recId,
@@ -164,7 +164,7 @@ export function toLast({ recId, industryCode, sub, eligibleCount, recommendation
     sub,
     passCount: eligibleCount,
     top: recommendations.slice(0, 5).map(lastTopItem),
-    margins: guView ? Object.fromEntries(guView.list.map((g) => [g.name, g.margin])) : {},
+    margins: Object.fromEntries((districtBudgets ?? []).map((d) => [d.district_code, d.budget_margin ?? null])),
   };
 }
 

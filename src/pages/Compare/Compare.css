@@ -34,3 +34,8 @@
 @media (min-width: 900px) {
   .cmp-table tr > :first-child { width: 112px; }
 }
+
+/* ⑭ 연동: 80% 범위 보조 줄 · 1곳만 골랐을 때 빈 칸 · 다시 받는 동안 흐리게 */
+.cmp-sub { flex-basis: 100%; font-size: 11px; font-weight: 400; color: var(--muted); }
+.cmp-slot { padding: 16px; font-size: 12px; font-weight: 400; color: var(--muted-2); background: oklch(0.985 0.003 262); }
+.cmp-loading { opacity: .6; transition: opacity .2s; }

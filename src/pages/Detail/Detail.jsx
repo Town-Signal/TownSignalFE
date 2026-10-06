@@ -207,7 +207,7 @@ function DongDetail({ code }) {
           <div className="text"><b>{d.dong_name}, 다른 곳과도 견줘볼까요?</b><span>관심 상권과 나란히 놓고 비교해요</span></div>
           <div className="actions">
             <Link to={fromRec ? '/recommend?step=3' : '/search'} className="btn-ghost">{fromRec ? '다른 추천 동네 보기' : '다른 동네 검색'}</Link>
-            <Link to="/compare" className="btn-primary">관심 상권과 비교하기 <span>›</span></Link>
+            <Link to={`/compare?dongs=${code}${industryCode ? `&industry_code=${industryCode}` : ''}`} className="btn-primary">관심 상권과 비교하기 <span>›</span></Link>
           </div>
         </div>
       </main>

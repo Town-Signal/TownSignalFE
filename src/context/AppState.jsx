@@ -38,13 +38,18 @@ const isTopItem = (t) => t && typeof t === 'object' && !Array.isArray(t) && type
 
 // ts-last(10.7): { rec_id, created_at, date, industry_code, sub, passCount, top[5], margins }
 // rec_id(UUID)가 없거나 top이 dong_code를 가진 객체가 아니면(목업 시절 [동명, 구명, 점수] 배열 · ranked 등) 버리고 지운다.
-// margins(구 이름 → 만 원)는 아직 목업인 상세 · 비교용 임시 값(F3에서 정리)
+// margins = { district_code(5자리): budget_margin(원) | null }. 예전 모양(구 이름 → 만 원)이면 margins만 비운다
+const isMargins = (m) => m && typeof m === 'object' && !Array.isArray(m) && Object.keys(m).every((k) => /^\d{5}$/.test(k));
 const loadLast = () => {
   const v = LS.get('ts-last', null);
   const ok = v && typeof v === 'object' && typeof v.rec_id === 'string' && UUID_RE.test(v.rec_id)
-    && Array.isArray(v.top) && v.top.length > 0 && v.top.every(isTopItem) && v.margins;
+    && Array.isArray(v.top) && v.top.length > 0 && v.top.every(isTopItem);
   if (v != null && !ok) LS.remove('ts-last');
-  return ok ? v : null;
+  if (!ok) return null;
+  if (isMargins(v.margins)) return v;
+  const fixed = { ...v, margins: {} };
+  LS.set('ts-last', fixed);
+  return fixed;
 };
 
 // ts-cond: 기본값 null(빈 폼, 10.7). 목업 시절 자동 저장된 데모 조건은 버리고 지운다.
