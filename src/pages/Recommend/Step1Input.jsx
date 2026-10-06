@@ -25,7 +25,7 @@ const groupIndustries = (items) => items.reduce((acc, i) => {
 export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff, onNext, masters, mastersError, onRetryMasters }) {
   const { age, career, capital, area, sub, tags } = cond;
   const cats = useMemo(() => (masters ? groupIndustries(masters.industries) : null), [masters]);
-  const big = cats?.[cond.big] ? cond.big : Object.keys(cats ?? {})[0];
+  const big = cats?.[cond.big] ? cond.big : null; // 빈 폼이면 대분류도 고르지 않은 상태
   const [query, setQuery] = useState('');
   const [leaving, setLeaving] = useState(null);
   const leaveTimer = useRef(null);
@@ -68,7 +68,9 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
             </div>
             {ageBad
               ? <span className="hint error" role="alert">15~99세만 가능해요</span>
-              : errors.age && <span className="hint error server" role="alert">{errors.age}</span>}
+              : errors.age
+                ? <span className="hint error server" role="alert">{errors.age}</span>
+                : !age && <span className="hint">만 나이로 입력해 주세요</span>}
           </label>
 
           <div className="s1-field career">
@@ -87,7 +89,7 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
           <label className="s1-field capital">
             <span className="label">자본금</span>
             <div className={`s1-input ${errors.capital ? 'invalid' : ''}`}>
-              <input value={fmt(capital)} inputMode="numeric" onChange={(e) => setCond({ capital: parseInt(digits(e.target.value, 7) || '0', 10) })} />
+              <input value={capital ? fmt(capital) : ''} inputMode="numeric" onChange={(e) => setCond({ capital: parseInt(digits(e.target.value, 7) || '0', 10) })} />
               <span>만 원</span>
             </div>
             {errors.capital
@@ -123,17 +125,19 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
                   >{k}</button>
                 ))}
               </div>
-              <div className="s1-subs">
-                <span>{big} › 세부 업종</span>
-                <div className="s1-chips" key={big}>
-                  {cats[big].map((s) => (
-                    <button
-                      key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
-                      aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
-                    >{s.name}</button>
-                  ))}
+              {big ? (
+                <div className="s1-subs">
+                  <span>{big} › 세부 업종</span>
+                  <div className="s1-chips" key={big}>
+                    {cats[big].map((s) => (
+                      <button
+                        key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
+                        aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
+                      >{s.name}</button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : <span className="hint">대분류를 고르면 세부 업종이 보여요</span>}
             </>
           )}
           {errors.sub && <span className="s1-group-error" role="alert">{errors.sub}</span>}
@@ -169,11 +173,11 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
         <div className="card s1-summary">
           <b>입력한 조건</b>
           <dl>
-            <div><dt>나이</dt><dd>{age}세</dd></div>
-            <div><dt>자본금</dt><dd>{fmt(capital)}만 원</dd></div>
-            <div><dt>희망 면적</dt><dd>{area}㎡</dd></div>
+            <div><dt>나이</dt><dd>{age ? `${age}세` : '—'}</dd></div>
+            <div><dt>자본금</dt><dd>{capital ? `${fmt(capital)}만 원` : '—'}</dd></div>
+            <div><dt>희망 면적</dt><dd>{area ? `${area}㎡` : '—'}</dd></div>
             <div><dt>경력</dt><dd>{career}년</dd></div>
-            <div><dt>업종</dt><dd>{big} › {sub}</dd></div>
+            <div><dt>업종</dt><dd>{big && sub ? `${big} › ${sub}` : '—'}</dd></div>
             <div><dt>자격증</dt><dd>{tags.length}개</dd></div>
           </dl>
           <p>다음 단계에서 서울 25개 자치구 각각의 지원 사업을 찾아 가용 예산을 계산해요.</p>

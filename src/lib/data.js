@@ -84,8 +84,12 @@ export const GU_CENTER = {
 export const DEFAULT_FAVS = ['성수1가2동', '신림동', '가산동'];
 export const DEFAULT_FAV_SUBS = { 성수1가2동: '커피전문점', 신림동: '커피전문점', 가산동: '한식' };
 export const DEFAULT_SUB = '커피전문점';
-// TODO(F4): 10.7 'API 연동 시 변경'대로 기본값을 빈 폼(null)으로 바꾼다. industry_code는 ⑩ 목록을 받은 뒤 맞춘다
-export const DEFAULT_COND = {
-  capital: 3000, age: '29', area: '33', career: 2, big: '외식업', sub: DEFAULT_SUB, industry_code: null,
+// ts-cond 기본값은 null(빈 폼, 10.7). 저장된 조건이 없으면 1단계를 이 빈 값으로 연다 — 희망 면적만 기본 33㎡(7.1)
+export const EMPTY_COND = {
+  age: '', capital: null, area: '33', career: 0, big: null, sub: null, industry_code: null, tags: [],
+};
+// 목업 시절 첫 진입에 자동 저장되던 데모 조건 — 사용자가 넣은 값이 아니므로 읽을 때 버린다
+export const LEGACY_DEMO_COND = {
+  capital: 3000, age: '29', area: '33', career: 2, big: '외식업', sub: DEFAULT_SUB,
   tags: ['바리스타 2급', '식품위생교육 이수'],
 };

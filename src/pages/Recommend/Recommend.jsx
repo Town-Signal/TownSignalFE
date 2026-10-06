@@ -30,14 +30,17 @@ function loadMasters() {
   return mastersPromise;
 }
 
-/** 저장된 조건의 업종이 목록에 없으면 이름 → 같은 대분류 첫 업종 → 전체 첫 업종 순으로 맞춘다 */
+/**
+ * 저장된 조건의 업종을 ⑩ 목록에 맞춘다: 코드 → 이름 → 같은 대분류 첫 업종 순.
+ * 빈 폼(업종 미선택)이면 아무것도 고르지 않는다. 맞는 것이 없으면 선택을 비운다.
+ */
 function resolveIndustry(cond, industries) {
-  const byCode = industries.find((i) => i.industry_code === cond.industry_code);
-  const pick = byCode
+  if (!cond.industry_code && !cond.sub && !cond.big) return null;
+  const pick = industries.find((i) => i.industry_code === cond.industry_code)
     ?? industries.find((i) => i.name === cond.sub)
-    ?? industries.find((i) => i.category === cond.big)
-    ?? industries[0];
-  return pick && (pick.industry_code !== cond.industry_code || pick.name !== cond.sub || pick.category !== cond.big)
+    ?? industries.find((i) => i.category === cond.big);
+  if (!pick) return { industry_code: null, sub: null, big: null };
+  return pick.industry_code !== cond.industry_code || pick.name !== cond.sub || pick.category !== cond.big
     ? { industry_code: pick.industry_code, sub: pick.name, big: pick.category }
     : null;
 }
@@ -78,8 +81,9 @@ export default function Recommend() {
 
   const { capital, area, age, sub } = cond;
   const ageN = parseInt(age, 10);
-  const ageBad = !(ageN >= 15 && ageN <= 99);
-  const ctaOff = step === 1 && (ageBad || !(capital > 0) || !(parseInt(area, 10) > 0) || !cond.industry_code)
+  const ageOk = ageN >= 15 && ageN <= 99;
+  const ageBad = String(age ?? '') !== '' && !ageOk; // 빈 칸은 오류로 보이지 않고 버튼만 막는다
+  const ctaOff = step === 1 && (!ageOk || !(capital > 0) || !(parseInt(area, 10) > 0) || !cond.industry_code)
     || (step === 2 && !passCount);
 
   const editCond = (patch) => {
