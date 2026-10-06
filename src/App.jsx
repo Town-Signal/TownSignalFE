@@ -17,7 +17,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="recommend" element={<Recommend />} />
         <Route path="search" element={<Search />} />
-        <Route path="dong/:name" element={<Detail />} />
+        <Route path="dong/:id" element={<Detail />} />
         <Route path="compare" element={<Compare />} />
         {import.meta.env.DEV && <Route path="dev/errors" element={<ErrorPreview />} />}
         <Route path="*" element={<Navigate to="/" replace />} />

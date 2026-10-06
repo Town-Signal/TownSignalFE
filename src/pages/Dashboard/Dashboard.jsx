@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
 import { dongInfo, dongPath } from '../../lib/calc';
+import { detailPath } from '../../lib/paths';
 import { daysUntil, fmt, growthText, manwon, requestIdText, shortDate } from '../../lib/format';
 import { simulatedFailure, toApiError } from '../../lib/errors';
 import { useApiError } from '../../hooks/useApiError';
@@ -140,7 +141,7 @@ export default function Dashboard() {
               <span className="arrow">›</span>
             </Link>
             {first ? (
-              <Link to={dongPath(first.name, { from: 'rec', sub: last.sub })} className="shortcut lift">
+              <Link to={detailPath(first.dong_code, { industryCode: last.industry_code, from: 'rec' })} className="shortcut lift">
                 <span className="ico green">↗</span>
                 <span className="text"><b>상세 분석 바로가기</b><span>최근 1위 {first.name} 분석 보기</span></span>
                 <span className="arrow">›</span>

@@ -27,3 +27,10 @@ export function daysUntil(iso, today = new Date()) {
 
 /** 오류 화면에 요청 번호를 작게 붙일 때 */
 export const requestIdText = (err) => (err?.requestId ? ` (오류 번호 ${err.requestId})` : '');
+
+/** 상권 지표 분기 '20252' → '25.2Q' */
+export const quarterShort = (yq) => (yq ? `${yq.slice(2, 4)}.${yq.slice(4)}Q` : '');
+/** 상권 지표 분기 '20252' → '2025년 2분기' */
+export const quarterText = (yq) => (yq ? `${yq.slice(0, 4)}년 ${yq.slice(4)}분기` : '');
+/** 임대료 기준 분기 '2026Q2' → '2026년 2분기' */
+export const rentQuarterText = (bq) => (bq ? bq.replace(/^(\d{4})Q(\d)$/, '$1년 $2분기') : '');

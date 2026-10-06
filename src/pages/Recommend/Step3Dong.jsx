@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
-import { dongPath } from '../../lib/calc';
+import { detailPath } from '../../lib/paths';
 import { fmt, signed } from '../../lib/format';
 import { DESKTOP, useMediaQuery } from '../../hooks/useMediaQuery';
 import { BackIcon, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, ViewToggle } from '../../components/ui';
@@ -45,7 +45,7 @@ function Factors({ d, compact }) {
 }
 
 /** 3단계: 추천 행정동 (④ 응답 · 정렬 탭 4종 · 리스트 ↔ 지도 · 선택한 동 상세) */
-export default function Step3Dong({ sub, budgets, dongs, passCount, disclaimer, view, setView, onBack }) {
+export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount, disclaimer, view, setView, onBack }) {
   const { favs, toggleFav } = useAppState();
   const [params, setParams] = useSearchParams();
   const [sort, setSort] = useState('score');
@@ -69,7 +69,7 @@ export default function Step3Dong({ sub, budgets, dongs, passCount, disclaimer, 
     [sorted, sel?.code],
   );
 
-  const href = (d) => dongPath(d.name, { from: 'rec', sub });
+  const href = (d) => detailPath(d.code, { industryCode, from: 'rec' });
   const isFav = (d) => favs.includes(d.name);
   const onFav = (d) => (e) => { e.stopPropagation(); toggleFav(d.name, sub); };
 

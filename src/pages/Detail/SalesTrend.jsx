@@ -1,54 +1,68 @@
 import { useState } from 'react';
+import { fmt, manwon, quarterShort } from '../../lib/format';
 
-const BASE_Y = 118; // viewBox 320×130에서 x축 위치
+const QUARTERS = 8;
 
-/** 최근 매출 추이: 분기별 점포당 월평균 (꺾은선 + 영역). 점에 올리거나 누르면 값 표시 */
-export default function SalesTrend({ quarters, lastQ, sub }) {
+/** '20252' → 앞 분기 '20251' */
+const prevQuarter = (yq) => {
+  const y = Number(yq.slice(0, 4));
+  const q = Number(yq.slice(4));
+  return q === 1 ? `${y - 1}4` : `${y}${q - 1}`;
+};
+
+/**
+ * 최근 매출 추이(10.5 8): ⑪ sales_trend 최근 8분기 막대, 값은 점포당 월평균(per_store_monthly_amount).
+ * 응답에 없는 분기는 빈 막대. space_standard_break(20241) 분기 앞에 상권 기준 변경 경계선.
+ */
+export default function SalesTrend({ trend, breakQuarter, latest, industryName, empty }) {
   const [hover, setHover] = useState(null);
-  const pts = quarters.filter((p) => !p.missing);
-  const line = pts.map((p) => `${p.x},${p.y}`).join(' ');
-  const area = `${pts[0].x},${BASE_Y} ${line} ${pts[pts.length - 1].x},${BASE_Y}`;
-  const hq = pts[hover];
+  const head = (
+    <div className="detail-card-head">
+      <h2 className="card-title">최근 매출 추이</h2>
+      <span className="sub">{industryName ? `${industryName} 평균` : '전 업종'} · 분기</span>
+    </div>
+  );
+  if (!trend?.length) return <section className="card detail-card trend">{head}{empty}</section>;
+
+  // 최근 분기부터 8개 분기를 거꾸로 채운다(빠진 분기는 null)
+  const byQ = Object.fromEntries(trend.map((t) => [t.year_quarter, t.per_store_monthly_amount]));
+  const keys = [];
+  for (let q = latest ?? trend[trend.length - 1].year_quarter; keys.length < QUARTERS; q = prevQuarter(q)) keys.unshift(q);
+  const bars = keys.map((q) => ({ q, v: byQ[q] == null ? null : manwon(byQ[q]) }));
+  const vals = bars.map((b) => b.v).filter((v) => v != null);
+  const max = Math.max(1, ...vals);
+  const top = vals.length ? Math.max(...vals) : null;
+  const lastV = bars[bars.length - 1].v;
 
   return (
     <section className="card detail-card trend">
-      <div className="detail-card-head">
-        <h2 className="card-title">최근 매출 추이</h2>
-        <span className="sub">{sub} 평균 · 분기</span>
-      </div>
-      <div className="trend-chart">
-        <svg viewBox="0 0 320 130" role="img" aria-label={`최근 ${pts.length}개 분기 매출 추이`}>
-          <defs>
-            <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="oklch(0.47 0.17 262)" stopOpacity="0.22" />
-              <stop offset="1" stopColor="oklch(0.47 0.17 262)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <polygon className="trend-rise" points={area} fill="url(#trend-area)" />
-          <line x1="0" y1={BASE_Y} x2="320" y2={BASE_Y} stroke="oklch(0.92 0.006 262)" />
-          <polyline className="trend-rise trend-line" points={line} />
-          {hq && <line className="trend-guide" x1={hq.x} y1={hq.y} x2={hq.x} y2={BASE_Y} />}
-          {pts.map((p, i) => (
-            <g
-              key={p.q} className="trend-dot"
-              onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => setHover(i)}
-            >
-              {/* 터치하기 쉽게 투명한 큰 원으로 히트 영역 확보 */}
-              <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
-              <circle cx={p.x} cy={p.y} r={hover === i ? 5.5 : 3.5} fill={hover === i ? 'oklch(0.47 0.17 262)' : '#fff'} stroke="oklch(0.47 0.17 262)" strokeWidth="2" />
-            </g>
-          ))}
-        </svg>
-        {hq && (
-          <div className="chart-tip" style={{ left: `${Math.min(84, Math.max(16, (hq.x / 320) * 100))}%`, top: `${(hq.y / 130) * 100}%` }}>
-            <span>{hq.q}</span><b>{hq.v}만 원</b>
+      {head}
+      <div className="trend-bars" role="img" aria-label={`최근 ${QUARTERS}개 분기 점포당 월평균 매출`}>
+        {bars.map((b, i) => (
+          <div
+            key={b.q}
+            className={`foot-col ${b.v === top ? 'strong' : ''} ${hover === i ? 'hover' : ''} ${b.q === breakQuarter && i > 0 ? 'break' : ''}`}
+            onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => setHover(i)}
+          >
+            {b.q === breakQuarter && i > 0 && <span className="break-label">상권 기준 변경</span>}
+            {b.v == null
+              ? <div className="bar empty" />
+              : <div className="bar" style={{ height: `${(b.v / max) * 100}%`, animationDelay: `${100 + i * 50}ms` }} />}
+            {hover === i && (
+              <div className="chart-tip above">
+                <b>{quarterShort(b.q)}</b>
+                <span className="main">{b.v == null ? '데이터 없음' : `월 ${fmt(b.v)}만 원`}</span>
+              </div>
+            )}
           </div>
-        )}
+        ))}
       </div>
       <div className="trend-labels">
-        {quarters.map((p) => <span key={p.q} className={p.missing ? 'missing' : ''}>{p.q}</span>)}
+        {bars.map((b) => <span key={b.q} className={b.v == null ? 'missing' : ''}>{quarterShort(b.q)}</span>)}
       </div>
-      <span className="sub">최근 분기 점포당 월평균이에요 <b>{lastQ}만 원</b></span>
+      <span className="sub">
+        {lastV == null ? '최근 분기 데이터가 없어요' : <>최근 분기 점포당 월평균이에요 <b>{fmt(lastV)}만 원</b></>}
+      </span>
     </section>
   );
 }

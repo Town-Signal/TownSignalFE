@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
+import { loadMasters } from '../../lib/masters';
 import { fmt, requestIdText } from '../../lib/format';
 import { useApiError } from '../../hooks/useApiError';
 import { simulatedFailure, toApiError } from '../../lib/errors';
@@ -21,14 +22,6 @@ const TOP_K = 20; // 한 페이지 20개(판정 40)
 const FIELD_KEYS = { age: 'age', capital: 'capital', target_area_sqm: 'area', career_years: 'career', industry_code: 'sub', certificates: 'tags' };
 const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
-// ⑩ 업종 · ⑰ 자격증은 앱에서 한 번만 받는다(명세 8.6 ⑰)
-let mastersPromise = null;
-function loadMasters() {
-  mastersPromise ??= Promise.all([api('/regions/industries'), api('/certificates')])
-    .then(([industries, certificates]) => ({ industries: industries.data.items, certificates: certificates.data.items }))
-    .catch((e) => { mastersPromise = null; throw e; });
-  return mastersPromise;
-}
 
 /**
  * 저장된 조건의 업종을 ⑩ 목록에 맞춘다: 코드 → 이름 → 같은 대분류 첫 업종 순.
@@ -246,7 +239,7 @@ export default function Recommend() {
           )}
           {step === 3 && guView && rec && (
             <Step3Dong
-              sub={rec.industry_name} budgets={guView} dongs={dongs} passCount={passCount} disclaimer={rec.disclaimer}
+              sub={rec.industry_name} industryCode={rec.industry_code} budgets={guView} dongs={dongs} passCount={passCount} disclaimer={rec.disclaimer}
               view={view} setView={setView} onBack={back}
             />
           )}

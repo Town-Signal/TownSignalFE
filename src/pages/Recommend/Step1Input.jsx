@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fmt } from '../../lib/format';
 import { BoxMsg } from '../../components/ui';
+import { groupIndustries } from '../../lib/masters';
 
 const digits = (v, max) => v.replace(/\D/g, '').slice(0, max);
 // 경력은 만 15세부터 쌓을 수 있다고 본다
@@ -15,11 +16,6 @@ function capitalInKorean(cap) {
   return `${eok}억${rest ? ` ${fmt(rest)}만` : ''}원`;
 }
 
-/** ⑩ 업종 목록 → { 대분류: [{ code, name }] } (서버 순서: 외식업 → 서비스업 → 소매업 → 이름) */
-const groupIndustries = (items) => items.reduce((acc, i) => {
-  (acc[i.category] ??= []).push({ code: i.industry_code, name: i.name });
-  return acc;
-}, {});
 
 /** 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) 입력 */
 export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff, onNext, masters, mastersError, onRetryMasters }) {

@@ -124,3 +124,24 @@
 @media (min-width: 720px) {
   .detail-cta .actions a { max-width: 220px; }
 }
+
+/* 추천 배지 · 기준 분기 */
+.badge-rec { background: oklch(0.95 0.04 262); color: var(--primary); }
+.detail-base { font-size: 12px; color: var(--muted); text-align: right; }
+
+/* 업종 분포: 비율 막대(⑪ share) */
+.dist-rows { display: flex; flex-direction: column; gap: 10px; }
+.dist-row { display: grid; grid-template-columns: minmax(64px, 7em) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.dist-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.dist-row .bar { height: 8px; border-radius: 4px; background: oklch(0.95 0.005 262); overflow: hidden; }
+.dist-row .bar i { display: block; height: 100%; border-radius: 4px; background: oklch(0.78 0.06 262); transform-origin: left; animation: grow-x .6s var(--ease) both; }
+.dist-row .val { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.dist-row.hit .name { font-weight: 700; color: var(--primary); }
+.dist-row.hit .bar i { background: var(--primary); }
+
+/* 매출 추이: 8분기 막대 + 상권 기준 변경 경계선 */
+.trend-bars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; align-items: end; height: 140px; padding-top: 18px; --bar: var(--primary); }
+.trend-bars .bar.empty { height: 100%; opacity: 1; background: none; border: 1px dashed oklch(0.85 0.008 262); border-bottom: none; }
+.trend-bars .foot-col.break::before { content: ''; position: absolute; left: -4px; top: -18px; bottom: 0; border-left: 1.5px dashed oklch(0.6 0.12 40); }
+.trend-bars .break-label { position: absolute; left: -2px; top: -18px; font-size: 10px; white-space: nowrap; color: oklch(0.5 0.12 40); }
+.trend-labels { gap: 6px; }
