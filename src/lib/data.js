@@ -81,8 +81,10 @@ export const GU_CENTER = {
   강동구: [37.55, 127.147],
 };
 
-export const DEFAULT_FAVS = ['성수1가2동', '신림동', '가산동'];
-export const DEFAULT_FAV_SUBS = { 성수1가2동: '커피전문점', 신림동: '커피전문점', 가산동: '한식' };
+// ts-favs 기본값 [] · ts-fav-sub 기본값 {}(10.7). 아래는 목업 시절 첫 진입에 자동 저장되던 데모 3곳 — 읽을 때 버린다
+// TODO(F4): 키를 동 이름 → dong_code로 바꾼다
+export const LEGACY_DEMO_FAVS = ['성수1가2동', '신림동', '가산동'];
+export const LEGACY_DEMO_FAV_SUBS = { 성수1가2동: '커피전문점', 신림동: '커피전문점', 가산동: '한식' };
 export const DEFAULT_SUB = '커피전문점';
 // ts-cond 기본값은 null(빈 폼, 10.7). 저장된 조건이 없으면 1단계를 이 빈 값으로 연다 — 희망 면적만 기본 33㎡(7.1)
 export const EMPTY_COND = {

@@ -1,13 +1,31 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LS } from '../lib/storage';
-import { DEFAULT_FAVS, DEFAULT_FAV_SUBS, DEFAULT_SUB, EMPTY_COND, LEGACY_DEMO_COND } from '../lib/data';
+import {
+  DEFAULT_SUB, EMPTY_COND, LEGACY_DEMO_COND, LEGACY_DEMO_FAV_SUBS, LEGACY_DEMO_FAVS,
+} from '../lib/data';
 import { dongInfo } from '../lib/calc';
 
 const AppState = createContext(null);
 
+const NO_FAVS = [];
+const NO_FAV_SUBS = {};
+const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const sortedKeys = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
+
+// ts-favs: 기본값 [](10.7). 목업 시절 자동 저장된 데모 3곳과 똑같으면(순서 무관) 버리고 지운다
 const loadFavs = () => {
-  const v = LS.get('ts-favs', DEFAULT_FAVS);
-  return Array.isArray(v) ? v.filter(dongInfo) : DEFAULT_FAVS;
+  const v = LS.get('ts-favs', null);
+  if (v == null) return NO_FAVS;
+  if (!Array.isArray(v) || sameJson([...v].sort(), [...LEGACY_DEMO_FAVS].sort())) { LS.remove('ts-favs'); return NO_FAVS; }
+  return v.filter(dongInfo);
+};
+// ts-fav-sub: 기본값 {}(10.7). 데모 3곳과 똑같으면 버리고 지운다
+const loadFavSubs = () => {
+  const v = LS.get('ts-fav-sub', null);
+  if (v == null) return NO_FAV_SUBS;
+  const ok = typeof v === 'object' && !Array.isArray(v);
+  if (!ok || sameJson(sortedKeys(v), sortedKeys(LEGACY_DEMO_FAV_SUBS))) { LS.remove('ts-fav-sub'); return NO_FAV_SUBS; }
+  return v;
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isTopItem = (t) => t && typeof t === 'object' && !Array.isArray(t) && typeof t.dong_code === 'string';
@@ -48,7 +66,7 @@ function usePersist(key, value) {
 
 export function AppStateProvider({ children }) {
   const [favs, setFavs] = useState(loadFavs);
-  const [favSubs, setFavSubs] = useState(() => ({ ...DEFAULT_FAV_SUBS, ...LS.get('ts-fav-sub', {}) }));
+  const [favSubs, setFavSubs] = useState(loadFavSubs);
   const [cond, setCondState] = useState(loadCond);
   const [last, setLast] = useState(loadLast);
 
