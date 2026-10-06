@@ -24,7 +24,7 @@ const ERROR_TOASTS = {
   VALIDATION_ERROR: { fallback: '입력한 값을 다시 확인해 주세요' },
   DONG_NOT_FOUND: { message: '찾을 수 없는 동네예요' },
   INDUSTRY_NOT_FOUND: { message: '업종을 다시 선택해 주세요' },
-  PROGRAM_NOT_FOUND: { message: '찾을 수 없는 공고예요' },
+  PROGRAM_NOT_FOUND: null,
   REC_NOT_FOUND: null,
 };
 
@@ -57,4 +57,20 @@ export function forcedFailure() {
   return code in ERROR_TOASTS ? code : null;
 }
 
-export const simulatedFailure = () => (navigator.onLine ? forcedFailure() : 'NETWORK_ERROR');
+const SAMPLES = {
+  INTERNAL_ERROR: { requestId: 'req_7f3a9c1e2b' },
+  VALIDATION_ERROR: {
+    message: '입력한 값을 다시 확인해 주세요.',
+    errors: [
+      { field: 'age', reason: 'OUT_OF_RANGE', message: '나이는 15~99세 사이로 입력해 주세요.' },
+      { field: 'industry_code', reason: 'REQUIRED', message: '희망 업종을 선택해 주세요.' },
+    ],
+  },
+};
+
+export const sampleError = (code) => new ApiError({ code, ...SAMPLES[code] });
+
+export function simulatedFailure() {
+  const code = navigator.onLine ? forcedFailure() : 'NETWORK_ERROR';
+  return code ? sampleError(code) : null;
+}

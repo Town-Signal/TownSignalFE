@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { ALL_DONGS, fmt, guBudgets } from '../../lib/calc';
-import { useToast } from '../../context/Toast';
+import { useApiError } from '../../hooks/useApiError';
 import { simulatedFailure } from '../../lib/errors';
 import { MobileHeader } from '../../components/Layout';
 import Step1Input from './Step1Input';
@@ -14,10 +14,11 @@ const STEPS = [['', '조건 입력'], ['자치구별 ', '예산 확인'], ['', '
 // 계산 중 → 완료 표시 → 다음 단계 (ms)
 const LOAD_DONE = 1200;
 const LOAD_END = 2200;
+const FIELD_KEYS = { age: 'age', capital: 'capital', target_area_sqm: 'area', career_years: 'career', industry_code: 'sub', certificates: 'tags' };
 
 export default function Recommend() {
   const { cond, setCond, setLast } = useAppState();
-  const toast = useToast();
+  const handleError = useApiError();
   const [params, setParams] = useSearchParams();
   const stepParam = Number(params.get('step'));
   const step = stepParam === 2 || stepParam === 3 ? stepParam : 1;
@@ -25,6 +26,7 @@ export default function Recommend() {
   const [dir, setDir] = useState(null); // 단계 전환 슬라이드 방향
   const [loading, setLoading] = useState(null); // { to, done }
   const [view, setView] = useState('list');
+  const [fieldErrors, setFieldErrors] = useState({});
   const timers = useRef([]);
   const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   useEffect(() => clearTimers, []);
@@ -39,6 +41,20 @@ export default function Recommend() {
   const ageBad = !(ageN >= 15 && ageN <= 99);
   const ctaOff = step === 1 && (ageBad || !(capital > 0) || !(parseInt(area, 10) > 0));
 
+  const editCond = (patch) => {
+    setCond(patch);
+    setFieldErrors((cur) => Object.fromEntries(Object.entries(cur).filter(([k]) => !(k in patch))));
+  };
+  const showFieldErrors = (errors) => {
+    const mapped = {};
+    errors.forEach((e) => {
+      const key = FIELD_KEYS[String(e.field).split('.')[0]];
+      if (key && !mapped[key]) mapped[key] = e.message;
+    });
+    setFieldErrors(mapped);
+    return Object.keys(mapped).length > 0;
+  };
+
   const go = (n) => {
     setDir(n > step ? 'fwd' : 'back');
     setParams((p) => { p.set('step', n); return p; }, { replace: true });
@@ -51,7 +67,7 @@ export default function Recommend() {
       const error = simulatedFailure();
       if (error) {
         setLoading(null);
-        toast.error(error, { onRetry: () => run(to) });
+        handleError(error, { onRetry: () => run(to), onFieldErrors: to === 2 ? showFieldErrors : undefined });
         return;
       }
       setLoading({ to, done: true });
@@ -106,7 +122,7 @@ export default function Recommend() {
         </ol>
 
         <div key={step} className={`rec-step ${dir ? `slide-${dir}` : ''}`}>
-          {step === 1 && <Step1Input cond={cond} setCond={setCond} ageBad={ageBad} ctaOff={ctaOff} onNext={next} />}
+          {step === 1 && <Step1Input cond={cond} setCond={editCond} errors={fieldErrors} ageBad={ageBad} ctaOff={ctaOff} onNext={next} />}
           {step === 2 && <Step2Gu cond={cond} budgets={budgets} passCount={passCount} view={view} setView={setView} onBack={back} onNext={next} />}
           {step === 3 && <Step3Dong cond={cond} budgets={budgets} dongs={dongs} passCount={passCount} view={view} setView={setView} onBack={back} />}
         </div>

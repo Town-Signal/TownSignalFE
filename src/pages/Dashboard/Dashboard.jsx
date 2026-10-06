@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { dongInfo, dongPath, fmt, growthColor, notices } from '../../lib/calc';
 import { Brand, MobileHeader } from '../../components/Layout';
-import { GrowthLowBadge, HeartButton, ResidentialBadge, Toast } from '../../components/ui';
+import { BoxMsg, GrowthLowBadge, HeartButton, ResidentialBadge, Toast } from '../../components/ui';
+import { forcedFailure } from '../../lib/errors';
 import './Dashboard.css';
 
 const NOTICES = notices();
@@ -11,6 +12,17 @@ const UNDO_MS = 4000;
 
 export default function Dashboard() {
   const { favs, last, toggleFav } = useAppState();
+  const [noticeMissing, setNoticeMissing] = useState(() => forcedFailure() === 'PROGRAM_NOT_FOUND');
+  const [noticeRetrying, setNoticeRetrying] = useState(false);
+  const noticeTimer = useRef(null);
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
+  const retryNotices = () => {
+    setNoticeRetrying(true);
+    noticeTimer.current = setTimeout(() => {
+      setNoticeRetrying(false);
+      setNoticeMissing(forcedFailure() === 'PROGRAM_NOT_FOUND');
+    }, 900);
+  };
   const [undo, setUndo] = useState(null);
   const undoTimer = useRef(null);
   useEffect(() => () => clearTimeout(undoTimer.current), []);
@@ -152,6 +164,9 @@ export default function Dashboard() {
             <h2>청년 창업 지원 공고</h2>
             <span className="hint">마감 임박 순</span>
           </div>
+          {noticeMissing ? (
+            <div className="card"><BoxMsg title="공고를 찾을 수 없어요" desc="잠시 후 다시 시도해 주세요." onRetry={retryNotices} retrying={noticeRetrying} /></div>
+          ) : (
           <ul className="card notice-list">
             {NOTICES.map((n) => (
               <li key={n.title}>
@@ -166,6 +181,7 @@ export default function Dashboard() {
               </li>
             ))}
           </ul>
+          )}
         </section>
       </main>
 

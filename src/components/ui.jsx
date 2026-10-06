@@ -97,6 +97,16 @@ export function Toast({ message, kind, actionLabel, onAction }) {
   );
 }
 
+export function BoxMsg({ title, desc, onRetry, retrying }) {
+  return (
+    <div className="box-msg" role="alert">
+      <b>{title}</b>
+      {desc && <span>{desc}</span>}
+      {onRetry && <button type="button" className="btn-ghost" disabled={retrying} onClick={onRetry}>{retrying ? '불러오는 중…' : '다시 시도'}</button>}
+    </div>
+  );
+}
+
 export function MapMsg({ error, onRetry }) {
   if (!error) return <div className="map-msg">지도를 불러오는 중…</div>;
   return (

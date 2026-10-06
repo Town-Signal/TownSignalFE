@@ -33,10 +33,12 @@ export function AppStateProvider({ children }) {
   }, [favs]);
   const setCond = useCallback((patch) => setCondState((cur) => ({ ...cur, ...patch })), []);
 
+  const clearRecId = useCallback(() => setLast((cur) => (cur?.rec_id ? { ...cur, rec_id: null } : cur)), []);
+
   const value = useMemo(() => ({
-    favs, toggleFav, cond, setCond, last, setLast,
+    favs, toggleFav, cond, setCond, last, setLast, clearRecId,
     favSub: (name) => favSubs[name] || cond.sub || DEFAULT_SUB,
-  }), [favs, favSubs, cond, last, toggleFav, setCond]);
+  }), [favs, favSubs, cond, last, toggleFav, setCond, clearRecId]);
 
   return <AppState.Provider value={value}>{children}</AppState.Provider>;
 }

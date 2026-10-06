@@ -16,7 +16,7 @@ function capitalInKorean(cap) {
 }
 
 /** 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종 · 자격증 입력 */
-export default function Step1Input({ cond, setCond, ageBad, ctaOff, onNext }) {
+export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff, onNext }) {
   const { age, career, capital, area, sub, tags } = cond;
   const big = CATS[cond.big] ? cond.big : Object.keys(CATS)[0];
   const [query, setQuery] = useState('');
@@ -46,19 +46,21 @@ export default function Step1Input({ cond, setCond, ageBad, ctaOff, onNext }) {
         <div className="s1-fields">
           <label className="s1-field age">
             <span className="label">나이</span>
-            <div className={`s1-input ${ageBad ? 'invalid' : ''}`}>
+            <div className={`s1-input ${ageBad || errors.age ? 'invalid' : ''}`}>
               <input
                 value={age} inputMode="numeric" aria-invalid={ageBad}
                 onChange={(e) => { const a = digits(e.target.value, 3); setCond({ age: a, career: Math.min(career, careerMax(a)) }); }}
               />
               <span>세</span>
             </div>
-            {ageBad && <span className="hint error" role="alert">15~99세만 가능해요</span>}
+            {ageBad
+              ? <span className="hint error" role="alert">15~99세만 가능해요</span>
+              : errors.age && <span className="hint error server" role="alert">{errors.age}</span>}
           </label>
 
           <div className="s1-field career">
             <span className="label" id="career-label">경력</span>
-            <div className="s1-input stepper">
+            <div className={`s1-input stepper ${errors.career ? 'invalid' : ''}`}>
               <button type="button" aria-label="경력 1년 줄이기" onClick={() => setCareer(career - 1)}>−</button>
               <span>
                 <input value={career} inputMode="numeric" aria-labelledby="career-label" onChange={(e) => setCareer(parseInt(digits(e.target.value, 2) || '0', 10))} />
@@ -66,24 +68,29 @@ export default function Step1Input({ cond, setCond, ageBad, ctaOff, onNext }) {
               </span>
               <button type="button" className="plus" aria-label="경력 1년 늘리기" onClick={() => setCareer(career + 1)}>+</button>
             </div>
+            {errors.career && <span className="hint error server" role="alert">{errors.career}</span>}
           </div>
 
           <label className="s1-field capital">
             <span className="label">자본금</span>
-            <div className="s1-input">
+            <div className={`s1-input ${errors.capital ? 'invalid' : ''}`}>
               <input value={fmt(capital)} inputMode="numeric" onChange={(e) => setCond({ capital: parseInt(digits(e.target.value, 7) || '0', 10) })} />
               <span>만 원</span>
             </div>
-            <span className="hint">{capitalInKorean(capital)}</span>
+            {errors.capital
+              ? <span className="hint error server" role="alert">{errors.capital}</span>
+              : <span className="hint">{capitalInKorean(capital)}</span>}
           </label>
 
           <label className="s1-field area">
             <span className="label">희망 면적</span>
-            <div className={`s1-input ${areaN > 0 ? '' : 'invalid'}`}>
+            <div className={`s1-input ${areaN > 0 && !errors.area ? '' : 'invalid'}`}>
               <input value={area} inputMode="numeric" onChange={(e) => setCond({ area: digits(e.target.value, 4) })} />
               <span>㎡</span>
             </div>
-            <span className={`hint ${areaN > 0 ? '' : 'error'}`}>{areaN > 0 ? `약 ${Math.round((areaN / 3.3058) * 10) / 10}평` : '㎡ 단위로 입력해 주세요'}</span>
+            {areaN > 0 && errors.area
+              ? <span className="hint error server" role="alert">{errors.area}</span>
+              : <span className={`hint ${areaN > 0 ? '' : 'error'}`}>{areaN > 0 ? `약 ${Math.round((areaN / 3.3058) * 10) / 10}평` : '㎡ 단위로 입력해 주세요'}</span>}
           </label>
         </div>
 
@@ -102,6 +109,7 @@ export default function Step1Input({ cond, setCond, ageBad, ctaOff, onNext }) {
               ))}
             </div>
           </div>
+          {errors.sub && <span className="s1-group-error" role="alert">{errors.sub}</span>}
         </div>
 
         <div className="s1-group">
@@ -126,6 +134,7 @@ export default function Step1Input({ cond, setCond, ageBad, ctaOff, onNext }) {
               <button type="button" className="custom" style={{ animationDelay: `${suggestions.length * 25}ms` }} onClick={() => addTag(q)}>+ ‘{q}’ 직접 추가</button>
             </div>
           )}
+          {errors.tags && <span className="s1-group-error" role="alert">{errors.tags}</span>}
         </div>
       </div>
 
