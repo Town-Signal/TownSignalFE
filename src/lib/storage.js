@@ -13,4 +13,9 @@ export const LS = {
       localStorage.setItem(key, JSON.stringify(value));
     } catch { /* 무시 */ }
   },
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch { /* 무시 */ }
+  },
 };
