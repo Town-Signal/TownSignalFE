@@ -1,8 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LS } from '../lib/storage';
-import { EMPTY_COND, LEGACY_DEMO_COND } from '../lib/data';
 
 const AppState = createContext(null);
+
+// ts-cond 기본값은 null(빈 폼, 10.7). 저장된 조건이 없으면 1단계를 이 빈 값으로 연다 — 희망 면적만 기본 33㎡(7.1)
+const EMPTY_COND = {
+  age: '', capital: null, area: '33', career: 0, big: null, sub: null, industry_code: null, tags: [],
+};
+// 목업 시절 첫 진입에 자동 저장되던 데모 조건 — 사용자가 넣은 값이 아니므로 읽을 때 버린다
+const LEGACY_DEMO_COND = {
+  capital: 3000, age: '29', area: '33', career: 2, big: '외식업', sub: '커피전문점',
+  tags: ['바리스타 2급', '식품위생교육 이수'],
+};
 
 const NO_FAVS = [];
 const NO_FAV_SUBS = {};

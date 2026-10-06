@@ -1,5 +1,6 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
-import { GROWTH_LOW_TIP } from '../lib/data';
+const GROWTH_LOW_TIP = '확보 분기 4개 미만 또는 2024년 상권 기준 변경으로 증감률을 믿기 어려워요';
+
 export function HeartButton({ on, onClick, className = '' }) {
   return (
     <button
