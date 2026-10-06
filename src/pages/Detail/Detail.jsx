@@ -98,9 +98,9 @@ function DongDetail({ code }) {
     ?? d.industry_distribution?.find((x) => x.is_selected)?.name ?? null;
   const noLookup = d.data_status === '조회 불가';
   const recBadge = fromRec || !!last?.top?.some((t) => t.dong_code === code);
-  // TODO(F4): 관심 등록은 아직 동 이름 + 업종 이름 기준(ts-favs dong_code 전환은 F4)
-  const fav = favs.includes(d.dong_name);
-  const onFav = () => toggleFav(d.dong_name, industryName);
+  // 관심 등록은 dong_code + 지금 보는 업종(10.7)
+  const fav = favs.includes(code);
+  const onFav = () => toggleFav(code, industryCode);
   const growth = d.growth;
   const growthLow = growth?.growth_confidence === '낮음';
   const rent = d.rent;

@@ -217,7 +217,7 @@ export default function Search() {
               <Picked
                 key={`${picked.dong_code}-${industryCode}`} x={picked} pred={pred} industry={industry} near={near}
                 rank={ranked.find((r) => r.dong_code === picked.dong_code)?.rank}
-                fav={favs.includes(picked.dong_name)} onFav={() => toggleFav(picked.dong_name, industry?.name)}
+                fav={favs.includes(picked.dong_code)} onFav={() => toggleFav(picked.dong_code, industryCode)}
                 onBack={backToList} onPick={(r) => pickDong(toPick(r))}
               />
             )}

@@ -68,8 +68,8 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
   );
 
   const href = (d) => detailPath(d.code, { industryCode, from: 'rec' });
-  const isFav = (d) => favs.includes(d.name);
-  const onFav = (d) => (e) => { e.stopPropagation(); toggleFav(d.name, sub); };
+  const isFav = (d) => favs.includes(d.code);
+  const onFav = (d) => (e) => { e.stopPropagation(); toggleFav(d.code, industryCode); };
 
   if (!sel) {
     return (

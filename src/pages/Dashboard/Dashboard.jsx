@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
-import { dongInfo, dongPath } from '../../lib/calc';
 import { detailPath } from '../../lib/paths';
 import { daysUntil, fmt, growthText, manwon, requestIdText, shortDate } from '../../lib/format';
 import { simulatedFailure, toApiError } from '../../lib/errors';
 import { useApiError } from '../../hooks/useApiError';
+import { useApiData } from '../../hooks/useApiData';
+import { useDongNames } from '../../hooks/useDongNames';
+import { useIndustries } from '../../hooks/useIndustries';
+import { findIndustry } from '../../lib/masters';
 import { Brand, MobileHeader } from '../../components/Layout';
 import { BoxMsg, GrowthLowBadge, HeartButton, ResidentialBadge, Toast } from '../../components/ui';
 import { lastTopItem } from '../Recommend/view';
@@ -32,7 +35,7 @@ const toNotice = (p) => {
 };
 
 export default function Dashboard() {
-  const { favs, last, setLast, toggleFav } = useAppState();
+  const { favs, last, setLast, addFav, removeFav, favIndustry } = useAppState();
   const handleError = useApiError();
 
   // ① 마감임박 공고 — 서버 순서(마감일 오름차순, 상시모집 맨 뒤)
@@ -64,18 +67,20 @@ export default function Dashboard() {
   const undoTimer = useRef(null);
   useEffect(() => () => clearTimeout(undoTimer.current), []);
 
-  const favDongs = useMemo(() => favs.map(dongInfo).filter(Boolean), [favs]);
+  const names = useDongNames(favs);
+  const industries = useIndustries();
   const ranked = last?.top ?? [];
   const first = ranked[0];
 
-  const unfav = (name) => {
-    toggleFav(name);
-    setUndo(name);
+  // ♡ 해제 → 토스트 + 되돌리기(원래 위치 · 업종 그대로 복구). 연속 해제 시 마지막 건만 되돌린다(10.2)
+  const unfav = (code) => {
+    setUndo({ code, industryCode: favIndustry(code), at: favs.indexOf(code), name: names[code]?.dong_name ?? code });
+    removeFav(code);
     clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndo(null), UNDO_MS);
   };
   const restore = () => {
-    toggleFav(undo);
+    addFav(undo.code, undo.industryCode, undo.at);
     clearTimeout(undoTimer.current);
     setUndo(null);
   };
@@ -151,10 +156,10 @@ export default function Dashboard() {
                 <span className="text"><b>상세 분석 바로가기</b><span>추천을 받으면 1위 동네를 바로 볼 수 있어요</span></span>
               </div>
             )}
-            {favDongs.length ? (
+            {favs.length ? (
               <Link to="/compare" className="shortcut lift">
                 <span className="ico blue">⇄</span>
-                <span className="text"><b>관심 상권 비교하기</b><span>관심 {favDongs.length}곳 나란히 보기</span></span>
+                <span className="text"><b>관심 상권 비교하기</b><span>관심 {favs.length}곳 나란히 보기</span></span>
                 <span className="arrow">›</span>
               </Link>
             ) : (
@@ -166,26 +171,14 @@ export default function Dashboard() {
         </div>
 
         <section className="dash-section" style={{ animationDelay: '.1s' }}>
-          <h2>관심 등록한 창업지 <span className="count">{favDongs.length}</span></h2>
-          {favDongs.length ? (
+          <h2>관심 등록한 창업지 <span className="count">{favs.length}</span></h2>
+          {favs.length ? (
             <div className="fav-scroll">
-              {favDongs.map((d) => (
-                <article key={d.name} className="fav-card lift">
-                  <div className="fav-head">
-                    {/* 카드 전체가 상세로 가는 링크 (::after로 영역 확장) */}
-                    <Link to={dongPath(d.name)} className="fav-link">
-                      <span className="fav-name"><b>{d.name}</b>{d.residential && <ResidentialBadge />}</span>
-                      <span className="fav-gu">{d.gu}</span>
-                    </Link>
-                    <div className="fav-score"><b>{d.scoreTxt}</b><span>종합점수</span></div>
-                    <HeartButton on className="sm" onClick={() => unfav(d.name)} />
-                  </div>
-                  <dl className="fav-stats">
-                    <div><dt>생존</dt><dd>{d.noPred ? '—' : `${d.sv[1]}개월`}</dd></div>
-                    <div><dt>월매출</dt><dd>{d.noPred ? '—' : `${fmt(d.sl[1])}만`}</dd></div>
-                    <div><dt>성장세</dt><dd>{d.growthTxt}</dd>{d.growthLowWhy && <GrowthLowBadge />}</div>
-                  </dl>
-                </article>
+              {favs.map((code) => (
+                <FavCard
+                  key={code} code={code} name={names[code]} industryCode={favIndustry(code)} industries={industries}
+                  onUnfav={() => unfav(code)}
+                />
               ))}
             </div>
           ) : (
@@ -228,7 +221,45 @@ export default function Dashboard() {
         </section>
       </main>
 
-      {undo && <Toast message={`${undo}을(를) 관심 목록에서 뺐어요`} actionLabel="되돌리기" onAction={restore} />}
+      {undo && <Toast message={`${undo.name}을(를) 관심 목록에서 뺐어요`} actionLabel="되돌리기" onAction={restore} />}
     </>
+  );
+}
+
+/** 관심 카드 1장(10.2 3): 카드마다 ⑫(dong_code + 그 동의 업종)를 매번 받는다. 수치는 저장하지 않는다(10.7) */
+function FavCard({ code, name, industryCode, industries, onUnfav }) {
+  const p = useApiData(industryCode ? `/regions/predictions/${code}/${industryCode}` : null);
+  const x = p.data;
+  const industryName = findIndustry(industries, industryCode)?.name;
+  const noPred = x?.data_status === '예측 불가';
+  const stat = (v) => (p.loading ? '…' : !x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
+
+  return (
+    <article className="fav-card lift">
+      <div className="fav-head">
+        {/* 카드 전체가 상세로 가는 링크 (::after로 영역 확장) */}
+        <Link to={detailPath(code, { industryCode })} className="fav-link">
+          <span className="fav-name"><b>{name?.dong_name ?? code}</b>{x?.data_status === '표본 부족' && <ResidentialBadge />}</span>
+          <span className="fav-gu">{[name?.district_name, industryName].filter(Boolean).join(' · ')}</span>
+        </Link>
+        <div className="fav-score"><b>{x?.total_score ?? '—'}</b><span>종합점수</span></div>
+        <HeartButton on className="sm" onClick={onUnfav} />
+      </div>
+      {!industryCode ? (
+        <p className="fav-note">업종을 정하면 점수를 볼 수 있어요</p>
+      ) : p.error ? (
+        <p className="fav-note">불러오지 못했어요 <button type="button" onClick={p.retry}>다시 시도</button></p>
+      ) : (
+        <dl className="fav-stats">
+          <div><dt>생존</dt><dd>{stat(x?.survival_p50 == null ? null : `${x.survival_p50}개월`)}</dd></div>
+          <div><dt>월매출</dt><dd>{stat(x?.sales_monthly_p50 == null ? null : `${fmt(manwon(x.sales_monthly_p50))}만`)}</dd></div>
+          <div>
+            <dt>성장세</dt>
+            <dd style={{ color: rateColor(x?.growth_rate) }}>{p.loading ? '…' : growthText(x?.growth_rate) ?? '정보 없음'}</dd>
+            {x?.growth_confidence === '낮음' && <GrowthLowBadge />}
+          </div>
+        </dl>
+      )}
+    </article>
   );
 }

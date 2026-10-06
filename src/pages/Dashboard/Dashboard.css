@@ -111,3 +111,7 @@
 @media (max-width: 419.98px) {
   .notice-list .deadline { display: none; }
 }
+
+/* 관심 카드 안 안내(업종 없음 · 불러오기 실패) */
+.fav-note { position: relative; z-index: 1; font-size: 12px; color: var(--muted); }
+.fav-note button { border: none; background: none; padding: 0 0 0 4px; font-size: 12px; font-weight: 600; color: var(--primary); cursor: pointer; }

@@ -1,31 +1,37 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LS } from '../lib/storage';
-import {
-  DEFAULT_SUB, EMPTY_COND, LEGACY_DEMO_COND, LEGACY_DEMO_FAV_SUBS, LEGACY_DEMO_FAVS,
-} from '../lib/data';
-import { dongInfo } from '../lib/calc';
+import { EMPTY_COND, LEGACY_DEMO_COND } from '../lib/data';
 
 const AppState = createContext(null);
 
 const NO_FAVS = [];
 const NO_FAV_SUBS = {};
-const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const sortedKeys = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
+const isDongCode = (s) => typeof s === 'string' && /^\d{8}$/.test(s);
+const isIndustryCode = (s) => typeof s === 'string' && /^CS\d{6}$/.test(s);
 
-// ts-favs: 기본값 [](10.7). 목업 시절 자동 저장된 데모 3곳과 똑같으면(순서 무관) 버리고 지운다
+/** 정리한 값이 저장된 값과 다르면 다시 쓰고, 비었으면 키를 지운다 */
+const rewrite = (key, raw, clean, empty) => {
+  if (JSON.stringify(raw) === JSON.stringify(clean)) return;
+  if (empty) LS.remove(key); else LS.set(key, clean);
+};
+
+// ts-favs: dong_code(8자리) 배열, 기본값 [](10.7). 8자리 숫자가 아닌 예전 값(동 이름 · 데모 3곳)은 버린다
 const loadFavs = () => {
   const v = LS.get('ts-favs', null);
   if (v == null) return NO_FAVS;
-  if (!Array.isArray(v) || sameJson([...v].sort(), [...LEGACY_DEMO_FAVS].sort())) { LS.remove('ts-favs'); return NO_FAVS; }
-  return v.filter(dongInfo);
+  const clean = Array.isArray(v) ? [...new Set(v.filter(isDongCode))] : [];
+  rewrite('ts-favs', v, clean, !clean.length);
+  return clean.length ? clean : NO_FAVS;
 };
-// ts-fav-sub: 기본값 {}(10.7). 데모 3곳과 똑같으면 버리고 지운다
+// ts-fav-sub: { dong_code: industry_code }, 기본값 {}(10.7). 예전 { 동명: 업종명 }은 버린다
 const loadFavSubs = () => {
   const v = LS.get('ts-fav-sub', null);
   if (v == null) return NO_FAV_SUBS;
   const ok = typeof v === 'object' && !Array.isArray(v);
-  if (!ok || sameJson(sortedKeys(v), sortedKeys(LEGACY_DEMO_FAV_SUBS))) { LS.remove('ts-fav-sub'); return NO_FAV_SUBS; }
-  return v;
+  const clean = ok ? Object.fromEntries(Object.entries(v).filter(([k, ic]) => isDongCode(k) && isIndustryCode(ic))) : {};
+  const empty = !Object.keys(clean).length;
+  rewrite('ts-fav-sub', v, clean, empty);
+  return empty ? NO_FAV_SUBS : clean;
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isTopItem = (t) => t && typeof t === 'object' && !Array.isArray(t) && typeof t.dong_code === 'string';
@@ -75,20 +81,41 @@ export function AppStateProvider({ children }) {
   usePersist('ts-cond', cond);
   usePersist('ts-last', last);
 
-  // 관심 등록 시 그때 보던 업종을 함께 기억한다 (비교하기의 업종 기준)
-  const toggleFav = useCallback((name, sub) => {
-    const on = !favs.includes(name);
-    setFavs(on ? [...favs, name] : favs.filter((x) => x !== name));
-    if (on && sub) setFavSubs((cur) => ({ ...cur, [name]: sub }));
-  }, [favs]);
+  // 관심 등록 · 해제는 dong_code로. 등록 때 보던 업종(industry_code)을 함께 기억하고(비교 기준), 해제하면 같이 지운다(10.7)
+  const addFav = useCallback((code, industryCode, at) => {
+    setFavs((cur) => {
+      if (cur.includes(code)) return cur;
+      const next = [...cur];
+      next.splice(at == null ? next.length : Math.min(at, next.length), 0, code);
+      return next;
+    });
+    if (industryCode) setFavSubs((cur) => (cur[code] === industryCode ? cur : { ...cur, [code]: industryCode }));
+  }, []);
+  const removeFav = useCallback((code) => {
+    setFavs((cur) => (cur.includes(code) ? cur.filter((x) => x !== code) : cur));
+    setFavSubs((cur) => {
+      if (!(code in cur)) return cur;
+      const rest = { ...cur };
+      delete rest[code];
+      return rest;
+    });
+  }, []);
+  const toggleFav = useCallback((code, industryCode) => {
+    if (favs.includes(code)) removeFav(code); else addFav(code, industryCode);
+  }, [favs, addFav, removeFav]);
   const setCond = useCallback((patch) => setCondState((cur) => ({ ...cur, ...patch })), []);
 
   const clearRecId = useCallback(() => setLast((cur) => (cur?.rec_id ? { ...cur, rec_id: null } : cur)), []);
 
+  // 관심 동네의 업종: ts-fav-sub → 최근 입력 조건 → 최근 추천. 셋 다 없으면 null(기본 업종 폐지, 10.7)
+  const favIndustry = useCallback(
+    (code) => favSubs[code] ?? cond.industry_code ?? last?.industry_code ?? null,
+    [favSubs, cond.industry_code, last?.industry_code],
+  );
+
   const value = useMemo(() => ({
-    favs, toggleFav, cond, setCond, last, setLast, clearRecId,
-    favSub: (name) => favSubs[name] || cond.sub || DEFAULT_SUB,
-  }), [favs, favSubs, cond, last, toggleFav, setCond, clearRecId]);
+    favs, toggleFav, addFav, removeFav, favIndustry, cond, setCond, last, setLast, clearRecId,
+  }), [favs, toggleFav, addFav, removeFav, favIndustry, cond, setCond, last, clearRecId]);
 
   return <AppState.Provider value={value}>{children}</AppState.Provider>;
 }
