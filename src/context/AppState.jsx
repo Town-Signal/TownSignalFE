@@ -9,9 +9,11 @@ const loadFavs = () => {
   const v = LS.get('ts-favs', DEFAULT_FAVS);
   return Array.isArray(v) ? v.filter(dongInfo) : DEFAULT_FAVS;
 };
+// ts-last(10.7): { rec_id, created_at, date, industry_code, sub, passCount, top[5], margins }
+// 목업 시절 모양(ranked)은 버린다. margins(구 이름 → 만 원)는 아직 목업인 상세 · 비교용 임시 값(F3에서 정리)
 const loadLast = () => {
   const v = LS.get('ts-last', null);
-  return v && Array.isArray(v.ranked) && v.ranked.length && v.margins ? v : null;
+  return v && Array.isArray(v.top) && v.top.length && v.margins ? v : null;
 };
 
 export function AppStateProvider({ children }) {

@@ -1,34 +1,70 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
-import { dongInfo, dongPath, fmt, growthColor, notices } from '../../lib/calc';
+import { api } from '../../lib/api';
+import { dongInfo, dongPath } from '../../lib/calc';
+import { daysUntil, fmt, growthText, manwon, requestIdText, shortDate } from '../../lib/format';
+import { simulatedFailure, toApiError } from '../../lib/errors';
+import { useApiError } from '../../hooks/useApiError';
 import { Brand, MobileHeader } from '../../components/Layout';
 import { BoxMsg, GrowthLowBadge, HeartButton, ResidentialBadge, Toast } from '../../components/ui';
-import { forcedFailure } from '../../lib/errors';
+import { lastTopItem } from '../Recommend/view';
 import './Dashboard.css';
 
-const NOTICES = notices();
 const UNDO_MS = 4000;
+const URGENT_DAYS = 7;
+const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
+
+/** ① 공고 한 줄(표시용): D-day · 마감일 · 최대 금액(만 원) */
+const toNotice = (p) => {
+  const dday = daysUntil(p.apply_end);
+  return {
+    id: p.program_id,
+    title: p.name,
+    org: p.agency ?? p.district_name,
+    amt: `최대 ${fmt(manwon(p.amount_max))}만`,
+    href: p.source_url,
+    dday,
+    urgent: dday != null && dday <= URGENT_DAYS,
+    deadlineTxt: p.apply_end ? `${shortDate(p.apply_end)} 마감` : '',
+  };
+};
 
 export default function Dashboard() {
-  const { favs, last, toggleFav } = useAppState();
-  const [noticeMissing, setNoticeMissing] = useState(() => forcedFailure() === 'PROGRAM_NOT_FOUND');
-  const [noticeRetrying, setNoticeRetrying] = useState(false);
-  const noticeTimer = useRef(null);
-  useEffect(() => () => clearTimeout(noticeTimer.current), []);
-  const retryNotices = () => {
-    setNoticeRetrying(true);
-    noticeTimer.current = setTimeout(() => {
-      setNoticeRetrying(false);
-      setNoticeMissing(forcedFailure() === 'PROGRAM_NOT_FOUND');
-    }, 900);
-  };
+  const { favs, last, setLast, toggleFav } = useAppState();
+  const handleError = useApiError();
+
+  // ① 마감임박 공고 — 서버 순서(마감일 오름차순, 상시모집 맨 뒤)
+  const [notices, setNotices] = useState({ loading: true });
+  const loadNotices = useCallback(() => {
+    setNotices((cur) => ({ ...cur, loading: true }));
+    const forced = simulatedFailure(); // 개발용 ?fail= 미리보기
+    (forced ? Promise.reject(forced) : api('/programs/upcoming'))
+      .then((json) => setNotices({ items: json.data.items.map(toNotice) }))
+      .catch((e) => setNotices({ error: toApiError(e) }));
+  }, []);
+  useEffect(() => { loadNotices(); }, [loadNotices]);
+
+  // 최근 추천 결과 — ts-last로 먼저 그리고, rec_id가 있으면 ⑤로 최신 값으로 바꾼다(판정 41)
+  const refreshed = useRef(null);
+  useEffect(() => {
+    const recId = last?.rec_id;
+    if (!recId || refreshed.current === recId) return;
+    refreshed.current = recId;
+    api(`/recommendations/${recId}`)
+      .then((json) => setLast((cur) => (cur?.rec_id === recId ? {
+        ...cur,
+        passCount: json.data.summary.eligible_district_count,
+        top: json.data.items.length ? json.data.items.slice(0, 5).map(lastTopItem) : cur.top,
+      } : cur)))
+      .catch((e) => handleError(e)); // REC_NOT_FOUND → ts-last의 rec_id만 지우고 저장된 요약은 그대로
+  }, [last?.rec_id, setLast, handleError]);
   const [undo, setUndo] = useState(null);
   const undoTimer = useRef(null);
   useEffect(() => () => clearTimeout(undoTimer.current), []);
 
   const favDongs = useMemo(() => favs.map(dongInfo).filter(Boolean), [favs]);
-  const ranked = useMemo(() => (last ? last.ranked.map((r) => dongInfo(r.name)).filter(Boolean) : []), [last]);
+  const ranked = last?.top ?? [];
   const first = ranked[0];
 
   const unfav = (name) => {
@@ -67,21 +103,21 @@ export default function Dashboard() {
                       <b>{first.name}</b>
                       <span>{first.gu}</span>
                     </div>
-                    <div className="dash-first-score"><b>{first.score}</b><span>종합점수</span></div>
+                    <div className="dash-first-score"><b>{first.score ?? '—'}</b><span>종합점수</span></div>
                   </div>
                   <dl className="dash-first-stats">
-                    <div><dt>예상 생존</dt><dd>{first.sv[1]}개월</dd></div>
-                    <div><dt>예상 월매출</dt><dd>월 {fmt(first.sl[1])}만</dd></div>
-                    <div><dt>성장세</dt><dd style={{ color: growthColor(first) }}>{first.hasGrowth ? first.growthTxt : '—'}</dd></div>
+                    <div><dt>예상 생존</dt><dd>{first.survival_p50 == null ? '정보 없음' : `${first.survival_p50}개월`}</dd></div>
+                    <div><dt>예상 월매출</dt><dd>{first.sales_monthly_p50 == null ? '정보 없음' : `월 ${fmt(manwon(first.sales_monthly_p50))}만`}</dd></div>
+                    <div><dt>성장세</dt><dd style={{ color: rateColor(first.growth_rate) }}>{growthText(first.growth_rate) ?? '—'}</dd></div>
                   </dl>
                 </div>
                 <ol className="dash-rest">
                   {ranked.slice(1, 5).map((d, i) => (
-                    <li key={d.name}>
+                    <li key={d.dong_code}>
                       <span className="rank">{i + 2}</span>
                       <span className="name"><b>{d.name}</b><span>{d.gu}</span></span>
-                      <span className="growth" style={{ color: growthColor(d) }}>{d.hasGrowth ? d.growthTxt : '—'}</span>
-                      <b className="score">{d.score}</b>
+                      <span className="growth" style={{ color: rateColor(d.growth_rate) }}>{growthText(d.growth_rate) ?? '—'}</span>
+                      <b className="score">{d.score ?? '—'}</b>
                     </li>
                   ))}
                 </ol>
@@ -164,12 +200,18 @@ export default function Dashboard() {
             <h2>청년 창업 지원 공고</h2>
             <span className="hint">마감 임박 순</span>
           </div>
-          {noticeMissing ? (
-            <div className="card"><BoxMsg title="공고를 찾을 수 없어요" desc="잠시 후 다시 시도해 주세요." onRetry={retryNotices} retrying={noticeRetrying} /></div>
+          {notices.error ? (
+            <div className="card">
+              <BoxMsg title="공고를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(notices.error)}`} onRetry={loadNotices} retrying={notices.loading} />
+            </div>
+          ) : !notices.items ? (
+            <div className="card fav-empty">공고를 불러오는 중…</div>
+          ) : !notices.items.length ? (
+            <div className="card fav-empty">지금 모집 중인 공고가 없어요</div>
           ) : (
           <ul className="card notice-list">
-            {NOTICES.map((n) => (
-              <li key={n.title}>
+            {notices.items.map((n) => (
+              <li key={n.id}>
                 <a href={n.href} target="_blank" rel="noopener noreferrer">
                   {n.dday != null
                     ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>

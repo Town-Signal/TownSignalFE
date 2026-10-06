@@ -1,10 +1,11 @@
+// 목업 계산 — 아직 API로 바꾸지 않은 화면(직접 찾아보기 · 상세 · 비교 · 관심 카드)만 쓴다. 연동이 끝나면 지운다.
 import {
   GU_ROWS, rentPerMonth, LOW_RENT_RELIABILITY, GROWTH_LOW, QUARTER_LIMIT, DONG_ROWS, DONG_GU,
-  ALL_SUBS, TYPICAL_STORES, GU_CENTER, NOTICE_ROWS, NOTICE_URL, NOTICE_TODAY,
+  ALL_SUBS, TYPICAL_STORES, GU_CENTER,
 } from './data';
+import { fmt } from './format';
 
-export const fmt = (n) => Math.round(n).toLocaleString('ko-KR');
-export const signed = (n) => (n >= 0 ? '+' : '−') + fmt(Math.abs(n)) + '만';
+export { fmt, signed } from './format';
 
 // 범위 막대(RangeBar)의 축 최댓값
 export const SURV_MAX = 80;
@@ -66,56 +67,6 @@ export function dongPath(name, { from, sub } = {}) {
   if (sub) q.set('sub', sub);
   const qs = q.toString();
   return `/dong/${encodeURIComponent(name)}${qs ? `?${qs}` : ''}`;
-}
-
-/**
- * 자치구별 가용 예산과 예산 여유.
- * 추정 초기 임대비용 = 보증금(월세 15개월) + 월세 3개월 = 월세 × 18. 월세는 33㎡ 기준이라 희망 면적에 비례시킨다.
- */
-export function guBudgets(capital, area) {
-  const areaK = Math.max(1, parseInt(area, 10) || 33) / 33;
-  const list = GU_ROWS.map(([name, sub, rentIdx, err]) => {
-    const rentM = rentPerMonth(rentIdx);
-    const rent = rentM == null ? null : Math.round(rentM * areaK) * 18;
-    const isError = !!err;
-    const noRent = rent == null;
-    const budget = capital + (sub || 0);
-    const margin = noRent || isError ? null : budget - rent;
-    const isFail = margin != null && margin < 0;
-    let programs = [];
-    let excluded = [];
-    if (name === '관악구') {
-      programs = [{ name: '관악구 청년 창업 초기자금', amt: '800만' }, { name: '서울시 청년 창업공간 임대료 지원', amt: '600만' }];
-      excluded = [
-        { name: '관악구 소상공인 시설개선 보조', amt: '300만', reason: '청년 창업 초기자금과 목적이 같아 함께 받을 수 없어요' },
-        { name: '서울시 청년 창업 초기지원', amt: '700만', reason: '구 초기자금을 이미 받으면 신청할 수 없어요' },
-      ];
-    } else if (sub > 0) {
-      const a = Math.round((sub * 0.6) / 100) * 100;
-      programs = [{ name: `${name} 청년 창업 초기자금`, amt: fmt(a) + '만' }, { name: `${name} 창업공간 임대료 지원`, amt: fmt(sub - a) + '만' }];
-      excluded = [{ name: `${name} 소상공인 시설개선 보조`, amt: '300만', reason: '청년 창업 초기자금과 목적이 같아 함께 받을 수 없어요' }];
-    }
-    return {
-      name, sub: sub || 0, budget, rent, margin, programs, excluded,
-      isError, isFail, isNoRent: noRent && !isError, isOk: !isError && !isFail && !noRent, isNone: sub === 0,
-      // 정렬 우선순위: 통과 → 임대료 정보 없음 → 오류 → 탈락
-      kind: isError ? 3 : isFail ? 4 : noRent ? 2 : 1,
-      marginTxt: margin == null ? '' : signed(margin),
-    };
-  });
-  const scale = Math.max(...list.map((g) => Math.max(g.budget, g.rent || 0))) * 1.04;
-  list.forEach((g) => {
-    g.capW = (capital / scale) * 100;
-    g.subW = (g.sub / scale) * 100;
-    g.rentL = ((g.rent || 0) / scale) * 100;
-  });
-  list.sort((a, b) => a.kind - b.kind || (b.margin ?? 0) - (a.margin ?? 0));
-  return {
-    list,
-    okCount: list.filter((g) => g.isOk).length, // 감당 가능 = 통과만
-    passNames: new Set(list.filter((g) => g.isOk || g.isNoRent).map((g) => g.name)), // 추천 대상 = 통과 + 임대료 정보 없음
-    margins: Object.fromEntries(list.map((g) => [g.name, g.margin])),
-  };
 }
 
 const hash = (s) => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -196,19 +147,6 @@ export function nearDongs(name, n = 3) {
     .sort((a, b) => a.d - b.d)
     .slice(0, n)
     .map((x) => ({ name: x.name, gu: x.gu, kmTxt: x.d === 0 ? '같은 구' : '이웃 구' }));
-}
-
-/** 지원 공고 목록 (마감 임박 순, 상시모집은 맨 뒤) */
-export function notices() {
-  const today = new Date(NOTICE_TODAY);
-  return NOTICE_ROWS.map(([title, org, deadline, amt]) => {
-    const dday = deadline ? Math.round((new Date(deadline) - today) / 864e5) : null;
-    return {
-      title, org, amt, href: NOTICE_URL, dday,
-      urgent: dday != null && dday <= 7,
-      deadlineTxt: deadline ? deadline.slice(5).replace('-', '.') + ' 마감' : '',
-    };
-  }).sort((a, b) => (a.dday ?? 9999) - (b.dday ?? 9999));
 }
 
 const subHash = (s) => { let x = 7; for (const ch of s) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; };

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { CATS, CERTS } from '../../lib/data';
-import { fmt } from '../../lib/calc';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { fmt } from '../../lib/format';
+import { BoxMsg } from '../../components/ui';
 
 const digits = (v, max) => v.replace(/\D/g, '').slice(0, max);
 // 경력은 만 15세부터 쌓을 수 있다고 본다
@@ -15,10 +15,17 @@ function capitalInKorean(cap) {
   return `${eok}억${rest ? ` ${fmt(rest)}만` : ''}원`;
 }
 
-/** 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종 · 자격증 입력 */
-export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff, onNext }) {
+/** ⑩ 업종 목록 → { 대분류: [{ code, name }] } (서버 순서: 외식업 → 서비스업 → 소매업 → 이름) */
+const groupIndustries = (items) => items.reduce((acc, i) => {
+  (acc[i.category] ??= []).push({ code: i.industry_code, name: i.name });
+  return acc;
+}, {});
+
+/** 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) 입력 */
+export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff, onNext, masters, mastersError, onRetryMasters }) {
   const { age, career, capital, area, sub, tags } = cond;
-  const big = CATS[cond.big] ? cond.big : Object.keys(CATS)[0];
+  const cats = useMemo(() => (masters ? groupIndustries(masters.industries) : null), [masters]);
+  const big = cats?.[cond.big] ? cond.big : Object.keys(cats ?? {})[0];
   const [query, setQuery] = useState('');
   const [leaving, setLeaving] = useState(null);
   const leaveTimer = useRef(null);
@@ -26,7 +33,13 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
 
   const areaN = parseInt(area, 10);
   const q = query.trim();
-  const suggestions = q ? CERTS.filter((c) => c.includes(q) && !tags.includes(c)).slice(0, 4) : [];
+  // ⑰ 표준명 · 동의어로 거른다(프론트 코드: 일치 항목 최대 4개)
+  const suggestions = q && masters
+    ? masters.certificates
+      .filter((c) => !tags.includes(c.name) && [c.name, ...c.aliases].some((n) => n.includes(q)))
+      .map((c) => c.name)
+      .slice(0, 4)
+    : [];
 
   const setCareer = (v) => setCond({ career: Math.max(0, Math.min(careerMax(age), v)) });
   const addTag = (t) => { if (!tags.includes(t)) setCond({ tags: [...tags, t] }); setQuery(''); };
@@ -96,19 +109,33 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
 
         <div className="s1-group">
           <span className="label">희망 업종</span>
-          <div className="s1-chips">
-            {Object.keys(CATS).map((k) => (
-              <button key={k} type="button" className={`chip ${big === k ? 'on' : ''}`} aria-pressed={big === k} onClick={() => setCond({ big: k, sub: CATS[k][0] })}>{k}</button>
-            ))}
-          </div>
-          <div className="s1-subs">
-            <span>{big} › 세부 업종</span>
-            <div className="s1-chips" key={big}>
-              {CATS[big].map((s) => (
-                <button key={s} type="button" className={`chip sub ${sub === s ? 'on' : ''}`} aria-pressed={sub === s} onClick={() => setCond({ sub: s })}>{s}</button>
-              ))}
-            </div>
-          </div>
+          {!cats ? (
+            mastersError
+              ? <BoxMsg title="업종 목록을 불러오지 못했어요" desc="조건 문제는 아니에요." onRetry={onRetryMasters} />
+              : <span className="hint">업종 목록을 불러오는 중…</span>
+          ) : (
+            <>
+              <div className="s1-chips">
+                {Object.keys(cats).map((k) => (
+                  <button
+                    key={k} type="button" className={`chip ${big === k ? 'on' : ''}`} aria-pressed={big === k}
+                    onClick={() => setCond({ big: k, sub: cats[k][0].name, industry_code: cats[k][0].code })}
+                  >{k}</button>
+                ))}
+              </div>
+              <div className="s1-subs">
+                <span>{big} › 세부 업종</span>
+                <div className="s1-chips" key={big}>
+                  {cats[big].map((s) => (
+                    <button
+                      key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
+                      aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
+                    >{s.name}</button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           {errors.sub && <span className="s1-group-error" role="alert">{errors.sub}</span>}
         </div>
 

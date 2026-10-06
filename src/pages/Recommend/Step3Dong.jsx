@@ -1,19 +1,13 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
-import { SALES_MAX, SURV_MAX, dongPath, fmt, signed } from '../../lib/calc';
+import { dongPath } from '../../lib/calc';
+import { fmt, signed } from '../../lib/format';
 import { DESKTOP, useMediaQuery } from '../../hooks/useMediaQuery';
 import { BackIcon, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, ViewToggle } from '../../components/ui';
+import { SORTS, sortDongs } from './view';
 
 const DongLeafletMap = lazy(() => import('../../components/DongLeafletMap'));
-
-const SORTS = [
-  ['score', '종합점수순', (d) => d.score],
-  ['margin', '예산 여유순', (d) => d.margin ?? -Infinity],
-  ['surv', '생존 기간순', (d) => d.sv[1]],
-  ['sales', '매출순', (d) => d.sl[1]],
-  ['growth', '성장세순', (d) => d.growth ?? -Infinity],
-];
 
 const Margin = ({ d, unit = '' }) => (d.margin == null
   ? <span className="badge badge-gray">정보 없음</span>
@@ -22,13 +16,14 @@ const Margin = ({ d, unit = '' }) => (d.margin == null
 function Metric({ label, range, max, mid, unit, ends, small }) {
   return (
     <div>
-      <div className={`metric-head ${small ? 'sm' : ''}`}><span>{label}</span><span><b>{mid}</b>{unit}</span></div>
-      <RangeBar range={range} max={max} ends={ends} />
+      <div className={`metric-head ${small ? 'sm' : ''}`}><span>{label}</span>{range ? <span><b>{mid}</b>{unit}</span> : <span>예측 불가</span>}</div>
+      {range && <RangeBar range={range} max={max} ends={ends} />}
     </div>
   );
 }
-const SurvMetric = ({ d, small }) => <Metric label="예상 생존 기간" range={d.sv} max={SURV_MAX} mid={d.sv[1]} unit="개월" ends={[d.sv[0], `${d.sv[2]}개월`]} small={small} />;
-const SalesMetric = ({ d, small }) => <Metric label="예상 월매출" range={d.sl} max={SALES_MAX} mid={fmt(d.sl[1])} unit="만 원" ends={[fmt(d.sl[0]), fmt(d.sl[2])]} small={small} />;
+// 막대 축 최댓값은 받은 목록의 80% 범위 상단으로 잡는다(그리기용 배율)
+const SurvMetric = ({ d, max, small }) => <Metric label="예상 생존 기간" range={d.sv} max={max} mid={d.sv?.[1]} unit="개월" ends={d.sv && [d.sv[0], `${d.sv[2]}개월`]} small={small} />;
+const SalesMetric = ({ d, max, small }) => <Metric label="예상 월매출" range={d.sl} max={max} mid={d.sl && fmt(d.sl[1])} unit="만 원" ends={d.sl && [fmt(d.sl[0]), fmt(d.sl[2])]} small={small} />;
 
 /** "왜 추천됐나요?" — 요인별 기여 점수 */
 function Factors({ d, compact }) {
@@ -49,30 +44,29 @@ function Factors({ d, compact }) {
   );
 }
 
-/** 3단계: 추천 행정동 (정렬 · 리스트 ↔ 지도 · 선택한 동 상세) */
-export default function Step3Dong({ cond, budgets, dongs, passCount, view, setView, onBack }) {
+/** 3단계: 추천 행정동 (④ 응답 · 정렬 탭 4종 · 리스트 ↔ 지도 · 선택한 동 상세) */
+export default function Step3Dong({ sub, budgets, dongs, passCount, disclaimer, view, setView, onBack }) {
   const { favs, toggleFav } = useAppState();
   const [params, setParams] = useSearchParams();
   const [sort, setSort] = useState('score');
   const [openDong, setOpenDong] = useState(null); // 모바일 카드의 '왜 추천됐나요?' 펼침
   const isDesk = useMediaQuery(DESKTOP);
-  const { sub } = cond;
 
-  const sorted = useMemo(() => {
-    const key = SORTS.find((s) => s[0] === sort)[2];
-    return dongs
-      .map((d) => ({ ...d, margin: budgets.margins[d.gu] }))
-      .sort((a, b) => key(b) - key(a))
-      .map((d, i) => ({ ...d, rank: i + 1 }));
-  }, [dongs, budgets, sort]);
+  // 받은 목록 재정렬만 한다(7.8). 순번은 현재 탭 기준
+  const sorted = useMemo(() => sortDongs(dongs, sort).map((d, i) => ({ ...d, rank: i + 1 })), [dongs, sort]);
+  const survMax = useMemo(() => Math.max(1, ...dongs.map((d) => d.sv?.[2] ?? 0)) * 1.05, [dongs]);
+  const salesMax = useMemo(() => Math.max(1, ...dongs.map((d) => d.sl?.[2] ?? 0)) * 1.05, [dongs]);
 
+  // 선택은 dong_code로(이름이 같은 동이 여러 구에 있다 — 신사동)
   const selParam = params.get('sel');
-  const sel = sorted.find((d) => d.name === selParam) ?? sorted[0];
-  const select = (name) => setParams((p) => { p.set('sel', name); return p; }, { replace: true });
+  const sel = sorted.find((d) => d.code === selParam) ?? sorted[0];
+  const select = (code) => setParams((p) => { p.set('sel', code); return p; }, { replace: true });
+  // TODO(가정): 지도 컴포넌트가 아직 동 이름으로 핀 위치를 찾는다 — 이름이 같은 동은 첫 동으로 고른다(geo_code 전환은 F3)
+  const selectByName = (name) => { const d = sorted.find((x) => x.name === name); if (d) select(d.code); };
 
   const pins = useMemo(
-    () => sorted.map((d) => ({ name: d.name, gu: d.gu, score: d.score, rank: d.rank, sel: d.name === sel?.name })),
-    [sorted, sel?.name],
+    () => sorted.map((d) => ({ name: d.name, gu: d.gu, score: d.score, rank: d.rank, sel: d.code === sel?.code })),
+    [sorted, sel?.code],
   );
 
   const href = (d) => dongPath(d.name, { from: 'rec', sub });
@@ -112,20 +106,20 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
         <div className="s3-map-grid">
           <div className="card s3-map">
             <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
-              <DongLeafletMap passGus={budgets.passNames} selGu={sel.gu} pins={pins} onPickDong={select} />
+              <DongLeafletMap passGus={budgets.passNames} selGu={sel.gu} pins={pins} onPickDong={selectByName} />
             </Suspense>
           </div>
           <div className="s3-map-side">
             <div className="card s3-mini-list">
               {sorted.map((d) => (
-                <button key={d.name} type="button" className={d.name === sel.name ? 'on' : ''} aria-pressed={d.name === sel.name} onClick={() => select(d.name)}>
+                <button key={d.code} type="button" className={d.code === sel.code ? 'on' : ''} aria-pressed={d.code === sel.code} onClick={() => select(d.code)}>
                   <span className="rank">{d.rank}</span>
                   <span className="name"><b>{d.name}</b><span>{d.gu}</span></span>
                   <b style={{ color: d.scoreColor }}>{d.score}</b>
                 </button>
               ))}
             </div>
-            <div className="card s3-mini" key={sel.name}>
+            <div className="card s3-mini" key={sel.code}>
               <div className="dong-head">
                 <div className="id">
                   <span className="name"><b>{sel.name}</b>{sel.residential && <ResidentialBadge />}</span>
@@ -138,7 +132,7 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
                 <div><span>예상 월매출</span><b>{sel.salesRange}</b></div>
                 <div><span>예산 여유 · 구 기준</span><Margin d={sel} /></div>
               </div>
-              <span className="fine">범위는 80% 확률 범위예요. 예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.</span>
+              <span className="fine">범위는 80% 범위예요. {disclaimer}</span>
               <Link to={href(sel)} className="btn-primary">상세 분석 보기 ›</Link>
             </div>
           </div>
@@ -149,10 +143,10 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
           <div className="s3-rows" key={sort}>
             {sorted.map((d, i) => (
               <div
-                key={d.name} role="button" tabIndex={0} aria-pressed={d.name === sel.name}
-                className={`s3-row lift ${d.name === sel.name ? 'on' : ''}`} style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                onClick={() => select(d.name)}
-                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(d.name); } }}
+                key={d.code} role="button" tabIndex={0} aria-pressed={d.code === sel.code}
+                className={`s3-row lift ${d.code === sel.code ? 'on' : ''}`} style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                onClick={() => select(d.code)}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(d.code); } }}
               >
                 <span className="rank">{d.rank}</span>
                 <div className="info">
@@ -165,7 +159,7 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
             ))}
           </div>
 
-          <div className="card s3-panel" key={sel.name}>
+          <div className="card s3-panel" key={sel.code}>
             <div className="dong-head lg">
               <div className="id">
                 <span className="name"><b>{sel.name}</b>{sel.residential && <ResidentialBadge lg />}</span>
@@ -174,8 +168,8 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
               <div className="score"><div><b style={{ color: sel.scoreColor }}>{sel.score}</b><span>종합점수 / 100</span></div><HeartButton on={isFav(sel)} className="lg" onClick={onFav(sel)} /></div>
             </div>
             <div className="metrics">
-              <div><SurvMetric d={sel} /><span className="fine">80% 확률 범위 {sel.survRange}</span></div>
-              <div><SalesMetric d={sel} /><span className="fine">80% 확률 범위 {sel.salesRange}</span></div>
+              <div><SurvMetric d={sel} max={survMax} /><span className="fine">80% 범위 {sel.survRange}</span></div>
+              <div><SalesMetric d={sel} max={salesMax} /><span className="fine">80% 범위 {sel.salesRange}</span></div>
             </div>
             <div className="tiles lg">
               <div>
@@ -188,8 +182,9 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
               <div className="why-head"><b>왜 추천됐나요?</b><span>가중치 {sel.weightsTxt}</span></div>
               <Factors d={sel} />
             </div>
+            {sel.sampleShort && <p className="fine">표본이 적어 신뢰할 수 없음 · 최근 4개 분기 평균 점포 수가 5개 미만이에요.</p>}
             <div className="panel-foot">
-              <p className="disclaimer">예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.</p>
+              <p className="disclaimer">{disclaimer}</p>
               <Link to={href(sel)} className="btn-primary">상세 분석 보기 ›</Link>
             </div>
           </div>
@@ -197,9 +192,9 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
       ) : (
         <div className="s3-cards" key={sort}>
           {sorted.map((d, i) => {
-            const open = openDong === d.name;
+            const open = openDong === d.code;
             return (
-              <article key={d.name} className="s3-card" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+              <article key={d.code} className="s3-card" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                 <div className="dong-head">
                   <div className="id">
                     <span className="name"><span className="rank">{d.rank}</span><b>{d.name}</b>{d.residential && <ResidentialBadge />}</span>
@@ -207,10 +202,10 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
                   </div>
                   <div className="score"><div><b style={{ color: d.scoreColor }}>{d.score}</b><span>종합점수</span></div><HeartButton on={isFav(d)} onClick={onFav(d)} /></div>
                 </div>
-                <SurvMetric d={d} small />
-                <SalesMetric d={d} small />
+                <SurvMetric d={d} max={survMax} small />
+                <SalesMetric d={d} max={salesMax} small />
                 <div className="margin-row"><span>예산 여유 <span>· {d.gu} 기준</span></span><Margin d={d} unit=" 원" /></div>
-                <button type="button" className="why-toggle" aria-expanded={open} onClick={() => setOpenDong(open ? null : d.name)}>
+                <button type="button" className="why-toggle" aria-expanded={open} onClick={() => setOpenDong(open ? null : d.code)}>
                   왜 추천됐나요? <i aria-hidden="true">▾</i>
                 </button>
                 {open && (
@@ -222,7 +217,7 @@ export default function Step3Dong({ cond, budgets, dongs, passCount, view, setVi
               </article>
             );
           })}
-          <p className="disclaimer">예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.</p>
+          <p className="disclaimer">{disclaimer}</p>
         </div>
       )}
     </div>

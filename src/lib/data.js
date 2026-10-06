@@ -81,26 +81,11 @@ export const GU_CENTER = {
   강동구: [37.55, 127.147],
 };
 
-// [제목, 기관, 마감일, 지원 규모]
-export const NOTICE_ROWS = [
-  ['서울 청년 창업 초기지원 2차', '서울특별시', '2026-10-02', '최대 700만'],
-  ['관악구 청년 창업 초기자금', '관악구청', '2026-10-06', '최대 800만'],
-  ['성동구 청년 창업공간 입주 모집', '성동구청', '2026-10-15', '임대료 80%'],
-  ['마포구 청년 창업 초기자금', '마포구청', '2026-10-24', '최대 780만'],
-  ['금천구 G밸리 창업 지원', '금천구청', '2026-11-08', '최대 900만'],
-  ['소상공인 창업 정책자금 상담', '소상공인시장진흥공단', null, '저금리 융자'],
-  ['서울 창업 멘토링 상시 신청', '서울창업허브', null, '무료 멘토링'],
-];
-export const NOTICE_URL = 'https://www.k-startup.go.kr';
-// 목업 공고의 D-day 기준일
-export const NOTICE_TODAY = '2026-09-28';
-
-export const CERTS = ['제과기능사', '제빵기능사', '제과제빵 산업기사', '바리스타 1급', '바리스타 2급', '한식조리기능사', '양식조리기능사', '식품위생교육 이수', '위생사', '미용사(일반)', '네일미용사'];
-
 export const DEFAULT_FAVS = ['성수1가2동', '신림동', '가산동'];
 export const DEFAULT_FAV_SUBS = { 성수1가2동: '커피전문점', 신림동: '커피전문점', 가산동: '한식' };
 export const DEFAULT_SUB = '커피전문점';
+// TODO(F4): 10.7 'API 연동 시 변경'대로 기본값을 빈 폼(null)으로 바꾼다. industry_code는 ⑩ 목록을 받은 뒤 맞춘다
 export const DEFAULT_COND = {
-  capital: 3000, age: '29', area: '33', career: 2, big: '외식업', sub: DEFAULT_SUB,
+  capital: 3000, age: '29', area: '33', career: 2, big: '외식업', sub: DEFAULT_SUB, industry_code: null,
   tags: ['바리스타 2급', '식품위생교육 이수'],
 };

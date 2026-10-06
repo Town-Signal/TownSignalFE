@@ -301,3 +301,10 @@
 .why-body { display: flex; flex-direction: column; gap: 14px; padding-top: 18px; transform-origin: top; animation: reveal .3s var(--ease) both; }
 .why-body .factor-stack { height: 10px; }
 .why-body .factor-warn { font-size: 12px; padding: 8px 10px; }
+
+/* 2단계 지원 사업 이름 → ③ 공고 상세 펼침 */
+.program-link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: oklch(0.7 0.02 262); }
+.program-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+.program-detail { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; padding: 10px 12px; border-radius: 10px; background: oklch(0.97 0.005 262); font-size: 13px; line-height: 1.5; }
+.program-detail a { color: var(--primary); font-weight: 600; }
+.rec-restoring { padding: 24px; text-align: center; color: var(--muted); }
