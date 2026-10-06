@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "http://TODO-EC2-HOST:8000/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
