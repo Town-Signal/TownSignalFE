@@ -1,11 +1,15 @@
 // 서울 경계 GeoJSON. 번들에 넣지 않고 처음 지도를 열 때 한 번만 받아 공유한다.
+import { ApiError, forcedFailure } from './errors';
+
 const cache = {};
 
 function load(file) {
+  const fail = forcedFailure();
+  if (fail) return Promise.reject(new ApiError({ code: fail }));
   if (!cache[file]) {
     cache[file] = fetch(`${import.meta.env.BASE_URL}geo/${file}`)
       .then((r) => {
-        if (!r.ok) throw new Error(`geo ${r.status}`);
+        if (!r.ok) throw Object.assign(new Error(`geo ${r.status}`), { status: r.status });
         return r.json();
       })
       .catch((e) => {

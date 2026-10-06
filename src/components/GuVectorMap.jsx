@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
 import { loadGuGeo } from '../lib/geo';
+import { errorKind } from '../lib/errors';
+import { MapMsg } from './ui';
 import './maps.css';
 
 /**
@@ -11,13 +13,15 @@ export default function GuVectorMap({ gus, selGu, onPick }) {
   const boxRef = useRef(null);
   const [size, setSize] = useState(null);
   const [geo, setGeo] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState(null);
+  const [tries, setTries] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    loadGuGeo().then((g) => alive && setGeo(g), () => alive && setFailed(true));
+    loadGuGeo().then((g) => alive && setGeo(g), (e) => alive && setError(errorKind(e)));
     return () => { alive = false; };
-  }, []);
+  }, [tries]);
+  const retry = () => { setError(null); setTries((n) => n + 1); };
 
   useEffect(() => {
     const ro = new ResizeObserver(([e]) => {
@@ -42,7 +46,7 @@ export default function GuVectorMap({ gus, selGu, onPick }) {
 
   return (
     <div ref={boxRef} className="gu-map">
-      {!shapes && <div className="map-msg">{failed ? '지도 데이터를 불러오지 못했어요. 리스트로 확인해 주세요.' : '지도를 불러오는 중…'}</div>}
+      {!shapes && <MapMsg error={error} onRetry={retry} />}
       {shapes && (
         <svg viewBox={`0 0 ${size.w} ${size.h}`} role="group" aria-label="서울 자치구 지도">
           <defs>

@@ -47,6 +47,9 @@
 .rec-loading h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; word-break: keep-all; }
 .rec-loading p { margin-top: -10px; font-size: 12px; line-height: 1.5; color: var(--muted); word-break: keep-all; }
 .rec-loading .spinner { width: 48px; height: 48px; border-radius: 50%; border: 4px solid oklch(0.93 0.02 262); border-top-color: var(--primary); animation: spin .8s linear infinite !important; }
+@media (max-width: 899.98px) {
+  body:has(.rec-mob-cta) .toast { bottom: calc(var(--tab-h) + var(--safe-b) + 72px); }
+}
 .rec-loading .check { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 22px; font-weight: 700; animation: pop .35s ease; }
 @media (min-width: 900px) {
   .rec-loading > div { max-width: 400px; border-radius: 24px; padding: 40px 28px 36px; gap: 20px; }

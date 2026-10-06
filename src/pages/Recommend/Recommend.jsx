@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { ALL_DONGS, fmt, guBudgets } from '../../lib/calc';
+import { useToast } from '../../context/Toast';
+import { simulatedFailure } from '../../lib/errors';
 import { MobileHeader } from '../../components/Layout';
 import Step1Input from './Step1Input';
 import Step2Gu from './Step2Gu';
@@ -15,6 +17,7 @@ const LOAD_END = 2200;
 
 export default function Recommend() {
   const { cond, setCond, setLast } = useAppState();
+  const toast = useToast();
   const [params, setParams] = useSearchParams();
   const stepParam = Number(params.get('step'));
   const step = stepParam === 2 || stepParam === 3 ? stepParam : 1;
@@ -41,14 +44,23 @@ export default function Recommend() {
     setParams((p) => { p.set('step', n); return p; }, { replace: true });
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
+  const run = (to) => {
+    clearTimers();
+    setLoading({ to, done: false });
+    timers.current = [setTimeout(() => {
+      const error = simulatedFailure();
+      if (error) {
+        setLoading(null);
+        toast.error(error, { onRetry: () => run(to) });
+        return;
+      }
+      setLoading({ to, done: true });
+      timers.current = [setTimeout(() => { setLoading(null); go(to); }, LOAD_END - LOAD_DONE)];
+    }, LOAD_DONE)];
+  };
   const next = () => {
     if (loading || ctaOff || step >= 3) return;
-    const to = step + 1;
-    setLoading({ to, done: false });
-    timers.current = [
-      setTimeout(() => setLoading({ to, done: true }), LOAD_DONE),
-      setTimeout(() => { setLoading(null); go(to); }, LOAD_END),
-    ];
+    run(step + 1);
   };
   const back = () => {
     if (loading) { clearTimers(); setLoading(null); } else if (step > 1) go(step - 1);

@@ -8,6 +8,7 @@ const Recommend = lazy(() => import('./pages/Recommend/Recommend'));
 const Search = lazy(() => import('./pages/Search/Search'));
 const Detail = lazy(() => import('./pages/Detail/Detail'));
 const Compare = lazy(() => import('./pages/Compare/Compare'));
+const ErrorPreview = lazy(() => import('./pages/Dev/ErrorPreview'));
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="search" element={<Search />} />
         <Route path="dong/:name" element={<Detail />} />
         <Route path="compare" element={<Compare />} />
+        {import.meta.env.DEV && <Route path="dev/errors" element={<ErrorPreview />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

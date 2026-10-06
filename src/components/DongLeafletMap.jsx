@@ -3,7 +3,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './maps.css';
 import { loadDongGeo, loadGuGeo } from '../lib/geo';
+import { errorKind } from '../lib/errors';
 import { relaxPins } from './pinLayout';
+import { MapMsg } from './ui';
 
 const PRI = 'oklch(0.47 0.17 262)';
 const DEEP = 'oklch(0.32 0.12 262)';
@@ -22,6 +24,7 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
   const ctx = useRef(null);
   const handlers = useRef({});
   const [status, setStatus] = useState('loading');
+  const [tries, setTries] = useState(0);
 
   useEffect(() => { handlers.current = { onPickDong, onPickGu }; });
 
@@ -40,6 +43,19 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
     const c = { map, pinPane, pins: [], fitKey: '', lastSel: '', dongCenter: {}, handlers };
     ctx.current = c;
 
+    const relayout = () => renderPins(c);
+    map.on('zoomend moveend', relayout);
+    map.on('zoomstart', () => { pinPane.style.transition = 'opacity .1s'; pinPane.style.opacity = '0.5'; });
+    map.on('zoomend', () => { pinPane.style.opacity = '1'; });
+    // 패널 접힘·회전 등 컨테이너 크기 변화
+    const ro = new ResizeObserver(() => { map.invalidateSize(); relayout(); });
+    ro.observe(elRef.current);
+
+    return () => { ro.disconnect(); map.remove(); ctx.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const c = ctx.current;
     let alive = true;
     Promise.all([loadGuGeo(), loadDongGeo()]).then(([gu, dong]) => {
       if (!alive) return;
@@ -52,20 +68,11 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
           layer.on('click', () => handlers.current.onPickGu?.(f.properties.name));
           layer.bindTooltip(f.properties.name, { permanent: true, direction: 'center', className: 'gu-label' });
         },
-      }).addTo(map);
+      }).addTo(c.map);
       setStatus('ready');
-    }, () => alive && setStatus('error'));
-
-    const relayout = () => renderPins(c);
-    map.on('zoomend moveend', relayout);
-    map.on('zoomstart', () => { pinPane.style.transition = 'opacity .1s'; pinPane.style.opacity = '0.5'; });
-    map.on('zoomend', () => { pinPane.style.opacity = '1'; });
-    // 패널 접힘·회전 등 컨테이너 크기 변화
-    const ro = new ResizeObserver(() => { map.invalidateSize(); relayout(); });
-    ro.observe(elRef.current);
-
-    return () => { alive = false; ro.disconnect(); map.remove(); ctx.current = null; };
-  }, []);
+    }, (e) => alive && setStatus(errorKind(e)));
+    return () => { alive = false; };
+  }, [tries]);
 
   useEffect(() => {
     if (status === 'ready') draw(ctx.current, { passGus, selGu, pins, padLeft });
@@ -75,7 +82,7 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
     <div className="dong-map">
       <div ref={elRef} className="leaflet-host" style={{ width: '100%', height: '100%' }} />
       {status !== 'ready' && (
-        <div className="map-msg">{status === 'error' ? '지도 데이터를 불러오지 못했어요. 리스트로 확인해 주세요.' : '지도를 불러오는 중…'}</div>
+        <MapMsg error={status === 'loading' ? null : status} onRetry={() => { setStatus('loading'); setTries((n) => n + 1); }} />
       )}
     </div>
   );

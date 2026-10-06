@@ -267,7 +267,10 @@ a.active .tab-icon { fill-opacity: .18; stroke-width: 2.2; }
   display: flex; align-items: center; gap: 10px; font-size: 14px;
   box-shadow: 0 16px 36px -18px oklch(0.2 0.03 262 / 0.6);
 }
-.toast span { flex: 1; }
+.toast > div { min-height: 50px; }
+.toast span { flex: 1; padding: 6px 0; line-height: 1.4; word-break: keep-all; }
+.toast span:last-child { padding-right: 10px; }
+.toast i { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--error); display: grid; place-items: center; font-size: 12px; font-weight: 800; font-style: normal; }
 .toast button { height: 38px; padding: 0 14px; border: none; border-radius: 10px; background: oklch(1 0 0 / 0.14); color: #fff; font-size: 13px; font-weight: 700; }
 @media (min-width: 900px) {
   .toast { bottom: 16px; }
@@ -280,3 +283,6 @@ a.active .tab-icon { fill-opacity: .18; stroke-width: 2.2; }
 .empty .actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
 
 .map-msg { position: absolute; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center; font-size: 13px; color: var(--muted); background: oklch(0.96 0.004 262); }
+.map-msg.error { flex-direction: column; gap: 6px; }
+.map-msg.error b { font-size: 15px; color: var(--ink); }
+.map-msg.error button { height: 40px; margin-top: 8px; }

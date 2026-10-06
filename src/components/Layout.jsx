@@ -1,6 +1,5 @@
 import { Suspense, useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-
 const TABS = [
   ['대시보드', '/', 'M4 4h7v16H4zM13 4h7v7h-7zM13 13h7v7h-7z'],
   ['추천받기', '/recommend', 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z'],

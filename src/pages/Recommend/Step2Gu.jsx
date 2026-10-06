@@ -1,5 +1,7 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useToast } from '../../context/Toast';
 import { fmt } from '../../lib/calc';
+import { simulatedFailure } from '../../lib/errors';
 import { BackIcon, ViewToggle } from '../../components/ui';
 
 const GuVectorMap = lazy(() => import('../../components/GuVectorMap'));
@@ -22,6 +24,17 @@ const Programs = ({ list }) => list.map((p) => <div key={p.name} className="prog
 export default function Step2Gu({ cond, budgets, passCount, view, setView, onBack, onNext }) {
   const { age, capital, area, career, sub, tags } = cond;
   const [openGu, setOpenGu] = useState('관악구');
+  const toast = useToast();
+  const [retrying, setRetrying] = useState(null);
+  const retryTimer = useRef(null);
+  useEffect(() => () => clearTimeout(retryTimer.current), []);
+  const retry = (name) => {
+    setRetrying(name);
+    retryTimer.current = setTimeout(() => {
+      setRetrying(null);
+      toast.error(simulatedFailure() || 'DB_UNAVAILABLE', { message: `${name} 지원 사업 정보를 아직 불러오지 못했어요. 잠시 후 다시 시도해 주세요` });
+    }, 900);
+  };
   const formula = (g) => `${fmt(capital)} + ${fmt(g.sub)} = ${fmt(g.budget)}만 원`;
   const failReason = (g) => `추정 초기 임대비용이 가용 예산보다 ${fmt(-g.margin)}만 원 많아요`;
 
@@ -122,7 +135,7 @@ export default function Step2Gu({ cond, budgets, passCount, view, setView, onBac
                     {g.isError && (
                       <div className="s2-error">
                         <span><b>지원 사업 정보를 불러오지 못했어요.</b><br />데이터 오류이며, 조건 문제는 아니에요.</span>
-                        <button type="button">다시 시도</button>
+                        <button type="button" disabled={retrying === g.name} onClick={() => retry(g.name)}>{retrying === g.name ? '불러오는 중…' : '다시 시도'}</button>
                       </div>
                     )}
                     {open && (

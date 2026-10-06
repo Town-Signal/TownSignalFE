@@ -1,7 +1,6 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
 import { GROWTH_LOW_TIP } from '../lib/data';
 import { storeLevel } from '../lib/calc';
-
 export function HeartButton({ on, onClick, className = '' }) {
   return (
     <button
@@ -85,13 +84,26 @@ export const BackIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
 );
 
-export function Toast({ message, actionLabel, onAction }) {
+export function Toast({ message, kind, actionLabel, onAction }) {
+  const isError = kind === 'error';
   return (
-    <div className="toast" role="status">
+    <div className={`toast ${isError ? 'error' : ''}`} role={isError ? 'alert' : 'status'}>
       <div>
+        {isError && <i aria-hidden="true">!</i>}
         <span>{message}</span>
-        <button type="button" onClick={onAction}>{actionLabel}</button>
+        {actionLabel && <button type="button" onClick={onAction}>{actionLabel}</button>}
       </div>
+    </div>
+  );
+}
+
+export function MapMsg({ error, onRetry }) {
+  if (!error) return <div className="map-msg">지도를 불러오는 중…</div>;
+  return (
+    <div className="map-msg error" role="alert">
+      <b>{error === 'network' ? '인터넷 연결을 확인해 주세요' : '지도 데이터를 불러오지 못했어요'}</b>
+      <span>리스트로도 확인할 수 있어요.</span>
+      <button type="button" className="btn-ghost" onClick={onRetry}>다시 시도</button>
     </div>
   );
 }
