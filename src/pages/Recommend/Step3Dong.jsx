@@ -61,11 +61,9 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
   const selParam = params.get('sel');
   const sel = sorted.find((d) => d.code === selParam) ?? sorted[0];
   const select = (code) => setParams((p) => { p.set('sel', code); return p; }, { replace: true });
-  // TODO(가정): 지도 컴포넌트가 아직 동 이름으로 핀 위치를 찾는다 — 이름이 같은 동은 첫 동으로 고른다(geo_code 전환은 F3)
-  const selectByName = (name) => { const d = sorted.find((x) => x.name === name); if (d) select(d.code); };
 
   const pins = useMemo(
-    () => sorted.map((d) => ({ name: d.name, gu: d.gu, score: d.score, rank: d.rank, sel: d.code === sel?.code })),
+    () => sorted.map((d) => ({ key: d.code, geo: d.geo, name: d.name, gu: d.gu, score: d.score, rank: d.rank, sel: d.code === sel?.code })),
     [sorted, sel?.code],
   );
 
@@ -106,7 +104,7 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
         <div className="s3-map-grid">
           <div className="card s3-map">
             <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
-              <DongLeafletMap passGus={budgets.passNames} selGu={sel.gu} pins={pins} onPickDong={selectByName} />
+              <DongLeafletMap passGus={budgets.passGeos} selGu={sel.geo?.slice(0, 5)} pins={pins} onPickDong={select} />
             </Suspense>
           </div>
           <div className="s3-map-side">
@@ -114,7 +112,7 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
               {sorted.map((d) => (
                 <button key={d.code} type="button" className={d.code === sel.code ? 'on' : ''} aria-pressed={d.code === sel.code} onClick={() => select(d.code)}>
                   <span className="rank">{d.rank}</span>
-                  <span className="name"><b>{d.name}</b><span>{d.gu}</span></span>
+                  <span className="name"><b>{d.name}</b><span>{d.gu}{!d.geo && ' · 지도에 표시되지 않음'}</span></span>
                   <b style={{ color: d.scoreColor }}>{d.score}</b>
                 </button>
               ))}

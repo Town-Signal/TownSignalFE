@@ -69,7 +69,8 @@ const WARNING_BANNERS = {
 export default function Step2Gu({ cond, budgets, warnings, passCount, view, setView, onBack, onNext, onRecalc, ctaOff }) {
   const { age, area, career, sub, tags } = cond;
   const capital = budgets.capital;
-  const [openGu, setOpenGu] = useState(() => (budgets.list.some((g) => g.name === '관악구') ? '관악구' : budgets.list[0]?.name));
+  // 펼친 구는 district_code로 고른다. 지도는 geo_code로 잇는다
+  const [openGu, setOpenGu] = useState(() => (budgets.list.find((g) => g.name === '관악구') ?? budgets.list[0])?.code);
   const formula = (g) => `${fmt(capital)} + ${fmt(g.sub)} = ${fmt(g.budget)}만 원`;
   const failReason = (g) => `추정 초기 임대비용이 가용 예산보다 ${fmt(-g.margin)}만 원 많아요`;
   const rentText = (g) => (g.rent == null ? '정보 없음' : `${fmt(g.rent)}만 원`);
@@ -77,9 +78,9 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
   // 지도 색: 예산 여유가 클수록 진한 초록(그리기용 배율)
   const mapGus = useMemo(() => {
     const maxMargin = Math.max(1, ...budgets.list.filter((g) => g.isOk).map((g) => g.margin));
-    return Object.fromEntries(budgets.list.map((g) => {
+    return Object.fromEntries(budgets.list.filter((g) => g.geo).map((g) => {
       const t = g.isOk ? g.margin / maxMargin : 0;
-      return [g.name, {
+      return [g.geo, {
         hatch: g.isNoRent, dark: g.isOk && t > 0.6,
         fill: g.isError ? 'oklch(0.9 0.05 25)' : g.isFail ? 'oklch(0.93 0.004 262)' : `oklch(${(0.9 - t * 0.28).toFixed(3)} ${(0.06 + t * 0.05).toFixed(3)} 170)`,
         tip: g.isError ? '데이터 오류' : g.isNoRent ? '임대료 정보 없음 · 추천 대상에 포함' : g.isFail ? `탈락 ${g.marginTxt}` : `예산 여유 ${g.marginTxt}`,
@@ -87,7 +88,8 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
     }));
   }, [budgets]);
 
-  const sel = budgets.list.find((g) => g.name === openGu);
+  const sel = budgets.list.find((g) => g.code === openGu);
+  const pickGeo = (geo) => setOpenGu(budgets.list.find((g) => g.geo === geo)?.code ?? null);
   const banners = warnings.filter((w) => WARNING_BANNERS[w.code] || w.code === 'CERTIFICATE_NOT_RECOGNIZED');
 
   return (
@@ -124,7 +126,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
             <>
               <div className="card s2-map">
                 <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
-                  <GuVectorMap gus={mapGus} selGu={openGu} onPick={setOpenGu} />
+                  <GuVectorMap gus={mapGus} selGu={sel?.geo} onPick={pickGeo} />
                 </Suspense>
                 <div className="s2-map-legend">
                   <span><i className="scale" />예산 여유 적음 → 많음</span>
@@ -157,10 +159,10 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
           ) : (
             <ul className="card s2-list">
               {budgets.list.map((g) => {
-                const open = openGu === g.name && !g.isError;
+                const open = openGu === g.code && !g.isError;
                 return (
                   <li key={g.code}>
-                    <button type="button" className={`s2-row ${g.isFail ? 'fail' : ''}`} aria-expanded={open} disabled={g.isError} onClick={() => setOpenGu(open ? null : g.name)}>
+                    <button type="button" className={`s2-row ${g.isFail ? 'fail' : ''}`} aria-expanded={open} disabled={g.isError} onClick={() => setOpenGu(open ? null : g.code)}>
                       <div className="top">
                         <span className="name">
                           {g.name}

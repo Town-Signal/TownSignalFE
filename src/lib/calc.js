@@ -1,15 +1,8 @@
-// 목업 계산 — 아직 API로 바꾸지 않은 화면(직접 찾아보기 · 상세 · 비교 · 관심 카드)만 쓴다. 연동이 끝나면 지운다.
-import {
-  GU_ROWS, rentPerMonth, LOW_RENT_RELIABILITY, GROWTH_LOW, QUARTER_LIMIT, DONG_ROWS, DONG_GU,
-  ALL_SUBS, TYPICAL_STORES, GU_CENTER,
-} from './data';
+// 목업 계산 — 아직 API로 바꾸지 않은 화면(비교 · 대시보드 관심 카드)만 쓴다. F4에서 연동이 끝나면 지운다.
+import { GU_ROWS, rentPerMonth, LOW_RENT_RELIABILITY, GROWTH_LOW, DONG_ROWS } from './data';
 import { fmt } from './format';
 
 export { fmt, signed } from './format';
-
-// 범위 막대(RangeBar)의 축 최댓값
-export const SURV_MAX = 80;
-export const SALES_MAX = 5800;
 
 const FACTOR_COLORS = ['oklch(0.6 0.13 262)', 'oklch(0.6 0.13 170)', 'oklch(0.6 0.13 80)'];
 
@@ -52,7 +45,6 @@ function buildDong([name, gu, sv, sl, growth, tops, flag]) {
 }
 
 const DONG_INFO = new Map(DONG_ROWS.map((row) => [row[0], buildDong(row)]));
-export const ALL_DONGS = [...DONG_INFO.values()];
 /** 예측 데이터가 있는 동의 정보. 없는 이름이면 null */
 export const dongInfo = (name) => DONG_INFO.get(name) ?? null;
 
@@ -68,88 +60,3 @@ export function dongPath(name, { from, sub } = {}) {
   const qs = q.toString();
   return `/dong/${encodeURIComponent(name)}${qs ? `?${qs}` : ''}`;
 }
-
-const hash = (s) => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
-const rng = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-
-const QUARTERS = ['24.3Q', '24.4Q', '25.1Q', '25.2Q', '25.3Q', '25.4Q', '26.1Q', '26.2Q'];
-const AGES = ['10대', '20대', '30대', '40대', '50대', '60대+'];
-const extraCache = new Map();
-
-/** 상세 화면용 부가 데이터(업종 분포 · 분기 매출 · 유동 인구). 목업이라 이름+업종 해시로 결정적 생성 */
-export function detailExtra(name, sub) {
-  const key = `${name}|${sub}`;
-  if (extraCache.has(key)) return extraCache.get(key);
-
-  const row = DONG_ROWS.find((x) => x[0] === name);
-  const r = rng(hash(name + sub));
-  const rd = rng(hash(name + '#dist'));
-  const base = row[3] ? row[3][1] : 2200;
-  const gr = row[4] ?? 3;
-
-  // 세부 업종별 점포 수. w = 업종별 서울 평균 대비 비율(50 = 평균)
-  const typ = (label) => TYPICAL_STORES[label] || 6;
-  const stores = ALL_SUBS.map((label) => {
-    let n = Math.round(typ(label) * (0.35 + rd() * 1.5));
-    if (row[6] === 'res') n = Math.max(1, Math.round(n * 0.2));
-    return { label, n, w: Math.min(100, (n / typ(label)) * 50), sel: label === sub };
-  }).sort((a, b) => b.n - a.n);
-  const dist = stores.slice(0, 8);
-  const selStore = stores.find((x) => x.sel);
-  if (selStore && !dist.includes(selStore)) dist.push(selStore);
-
-  // 분기별 점포당 월평균 매출 → 320×130 viewBox 좌표
-  const vals = QUARTERS.map((_, i) => base * (1 - ((gr / 100) * (7 - i)) / 4) * (0.93 + r() * 0.14));
-  const vmax = Math.max(...vals) * 1.1;
-  const vmin = Math.min(...vals) * 0.8;
-  const have = QUARTER_LIMIT[name] ?? QUARTERS.length;
-  const quarters = vals.map((v, i) => ({
-    q: QUARTERS[i], v: fmt(v), x: 20 + i * 40, y: 110 - ((v - vmin) / (vmax - vmin)) * 95,
-    missing: i < QUARTERS.length - have,
-  }));
-
-  const male = Math.round(44 + r() * 12);
-  const aw = [8, 30 + r() * 12, 22 + r() * 8, 16, 12, 9].map((x) => x * (0.8 + r() * 0.4));
-  const total = aw.reduce((a, b) => a + b, 0);
-  const split = aw.map((v) => {
-    const s = Math.min(0.75, Math.max(0.25, male / 100 + (r() - 0.5) * 0.24));
-    return [v * s, v * (1 - s)];
-  });
-
-  const out = {
-    dist, distShort: stores.slice(0, 4), selStoreCount: selStore ? selStore.n : null,
-    quarters, lastQ: quarters[7].v,
-    male, female: 100 - male,
-    peakAge: AGES[aw.indexOf(Math.max(...aw))],
-    ages: split.map(([m, f], i) => ({ label: AGES[i], m: Math.round((m / total) * 100), f: Math.round((f / total) * 100) })),
-  };
-  extraCache.set(key, out);
-  return out;
-}
-
-/** 점포 수 수준: 0 적음 · 1 보통 · 2 많음 */
-export const storeLevel = (w) => (w >= 70 ? 2 : w <= 35 ? 0 : 1);
-
-const km = (a, b) => Math.hypot((a[1] - b[1]) * 88.2, (a[0] - b[0]) * 111);
-
-/**
- * 점포 데이터가 없는 동 → 가까운 동네 최대 n곳.
- * 목업: 동 좌표가 없어 구 중심 거리로 근사(같은 구 우선, 그다음 중심 간 7km 이내 이웃 구).
- */
-export function nearDongs(name, n = 3) {
-  const gu = DONG_GU[name];
-  const origin = GU_CENTER[gu];
-  if (!origin) return [];
-  return ALL_DONGS
-    .filter((d) => d.name !== name && !d.noPred)
-    .map((d) => ({ name: d.name, gu: d.gu, d: d.gu === gu ? 0 : km(origin, GU_CENTER[d.gu]) }))
-    .filter((x) => x.d <= 7)
-    .sort((a, b) => a.d - b.d)
-    .slice(0, n)
-    .map((x) => ({ name: x.name, gu: x.gu, kmTxt: x.d === 0 ? '같은 구' : '이웃 구' }));
-}
-
-const subHash = (s) => { let x = 7; for (const ch of s) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x; };
-/** 직접찾기: 업종별 점수 (목업 — 종합점수에 업종 해시로 ±8점 보정) */
-export const subScore = (d, sub) =>
-  d.score == null ? null : Math.max(20, Math.min(98, d.score + (subHash(d.name + sub) % 17) - 8));

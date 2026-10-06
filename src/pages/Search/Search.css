@@ -101,3 +101,14 @@
   .search-top { padding-top: 16px; }
   .search-ac { top: 70px; }
 }
+
+/* API 연동: 안내 문구 · 목록 머리 링크 · 자동완성 키보드 선택 · 구에서 고르기 · 점포 수준 */
+.search-hint { padding: 10px 16px; font-size: 13px; color: var(--muted); }
+.search-top .search-hint { padding: 4px 0; }
+.search-list .head .link { border: none; background: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--primary); cursor: pointer; }
+.search-list .name em { font-style: normal; font-weight: 600; }
+.search-ac button.active { background: var(--bg); }
+.browse-gus { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 16px 14px; }
+.search-result .stats > div > b + span { font-size: 11px; opacity: .85; }
+.store-level { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
+.store-level b { font-size: 15px; }

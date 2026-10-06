@@ -1,6 +1,5 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
 import { GROWTH_LOW_TIP } from '../lib/data';
-import { storeLevel } from '../lib/calc';
 export function HeartButton({ on, onClick, className = '' }) {
   return (
     <button
@@ -36,28 +35,6 @@ export function RangeBar({ range: [lo, mid, hi], max, ends }) {
         </div>
       )}
     </>
-  );
-}
-
-const LEVELS = ['적음', '보통', '많음'];
-
-export function LevelLegend({ title }) {
-  return (
-    <span className="lv-legend" title={title}>
-      {LEVELS.map((l, i) => <span key={l}><i className={`lv-${i}`} />{l}</span>)}
-    </span>
-  );
-}
-
-/** 업종 점포 수 수준을 3칸 막대(적음/보통/많음)로 표시 */
-export function LevelRow({ label, w, hit }) {
-  const lv = storeLevel(w);
-  return (
-    <div className="lv-row">
-      <span className={`name ${hit ? 'hit' : ''}`}>{label}</span>
-      <span className="segs">{LEVELS.map((l, i) => <i key={l} className={i === lv ? `lv-${i}` : ''} />)}</span>
-      <span className={`tag lv-tag-${lv}`}>{LEVELS[lv]}</span>
-    </div>
   );
 }
 

@@ -30,6 +30,7 @@ export function toGuView(budget) {
     const margin = manwon(d.budget_margin);
     return {
       code: d.district_code,
+      geo: d.geo_code, // 자치구 경계 GeoJSON 코드(2013 통계청 5자리)
       name: d.district_name,
       sub: manwon(d.support_fund_max),
       budget: manwon(d.available_budget),
@@ -57,7 +58,8 @@ export function toGuView(budget) {
     list,
     capital: manwon(capital),
     eligibleCount: budget.summary.eligible_district_count,
-    passNames: new Set(list.filter((g) => g.isOk || g.isNoRent).map((g) => g.name)),
+    // 3단계 지도에서 옅게 칠할 구(통과 + 확인불가)의 geo_code
+    passGeos: new Set(list.filter((g) => (g.isOk || g.isNoRent) && g.geo).map((g) => g.geo)),
   };
 }
 
@@ -108,6 +110,7 @@ export function toDongView(d) {
   const margin = manwon(d.budget_margin);
   return {
     code: d.dong_code,
+    geo: d.geo_code, // 행정동 경계 GeoJSON 코드(7자리). null이면 지도에 그리지 않는다
     name: d.dong_name,
     gu: d.district_name,
     rankNo: d.rank_no,

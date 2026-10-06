@@ -15,11 +15,15 @@ const bottomPad = () => (isDesktop() ? 0 : Math.round(window.innerHeight * 0.28)
 
 /**
  * 실제 지도(OSM 타일) 위에 구/동 경계와 순위 핀을 올린다 (직접찾기 · 추천 3단계).
- * passGus: Set<구>(옅게 채울 구) · selGu: 동 경계까지 보여줄 구
- * pins: [{ name, gu, score, rank, sel }] — 순위 10위까지는 라벨 핀, 나머지는 점
+ * 경계와는 이름이 아니라 geo_code(2013 통계청 코드 — 구 5자리 · 동 7자리)로 잇는다(명세 10.8).
+ * passGus: Set<구 geo_code>(옅게 채울 구) · selGu: 동 경계까지 보여줄 구 geo_code
+ * pins: [{ key: dong_code, geo, name, gu, score, rank, sel }] — geo가 없는 핀은 그리지 않는다.
+ *   순위 10위까지는 라벨 핀, 나머지는 점
+ * fills: { [동 geo_code]: { color, key } } — 동 경계 색칠(직접찾기). 누르면 onPickDong(key)
  * padLeft: 데스크톱에서 지도 왼쪽을 가리는 패널 폭
  */
-export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPickDong, onPickGu }) {
+const NO_PASS = new Set();
+export default function DongLeafletMap({ passGus = NO_PASS, selGu, pins, fills, padLeft = 0, onPickDong, onPickGu }) {
   const elRef = useRef(null);
   const ctx = useRef(null);
   const handlers = useRef({});
@@ -40,6 +44,7 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
     const pinPane = map.createPane('pinPane');
     pinPane.style.zIndex = 650;
 
+    map.createPane('fillPane').style.zIndex = 355;
     const c = { map, pinPane, pins: [], fitKey: '', lastSel: '', dongCenter: {}, handlers };
     ctx.current = c;
 
@@ -61,11 +66,11 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
       if (!alive) return;
       c.gu = gu;
       c.dong = dong;
-      dong?.features.forEach((f) => { c.dongCenter[f.properties.name] = L.geoJSON(f).getBounds().getCenter(); });
+      dong?.features.forEach((f) => { c.dongCenter[String(f.properties.code)] = L.geoJSON(f).getBounds().getCenter(); });
       c.guLayer = L.geoJSON(gu, {
         pane: 'guPane',
         onEachFeature: (f, layer) => {
-          layer.on('click', () => handlers.current.onPickGu?.(f.properties.name));
+          layer.on('click', () => handlers.current.onPickGu?.(String(f.properties.code)));
           layer.bindTooltip(f.properties.name, { permanent: true, direction: 'center', className: 'gu-label' });
         },
       }).addTo(c.map);
@@ -75,8 +80,8 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
   }, [tries]);
 
   useEffect(() => {
-    if (status === 'ready') draw(ctx.current, { passGus, selGu, pins, padLeft });
-  }, [status, passGus, selGu, pins, padLeft]);
+    if (status === 'ready') draw(ctx.current, { passGus, selGu, pins, fills, padLeft });
+  }, [status, passGus, selGu, pins, fills, padLeft]);
 
   return (
     <div className="dong-map">
@@ -88,19 +93,36 @@ export default function DongLeafletMap({ passGus, selGu, pins, padLeft = 0, onPi
   );
 }
 
-function guCenter(c, name) {
-  const f = c.gu.features.find((x) => x.properties.name === name);
-  return f ? L.geoJSON(f).getBounds().getCenter() : null;
+const codeOf = (f) => String(f.properties.code);
+
+/** 동 경계 색칠 레이어. fills가 바뀔 때만 다시 만든다 */
+function drawFills(c, fills) {
+  if (fills === c.lastFills) return;
+  c.lastFills = fills;
+  if (c.fillLayer) { c.map.removeLayer(c.fillLayer); c.fillLayer = null; }
+  if (!fills || !c.dong) return;
+  c.fillLayer = L.geoJSON(c.dong, {
+    pane: 'fillPane',
+    style: (f) => {
+      const v = fills[codeOf(f)];
+      return { color: '#fff', weight: 0.6, fillColor: v?.color ?? 'oklch(0.9 0.004 262)', fillOpacity: v ? 0.62 : 0.25 };
+    },
+    onEachFeature: (f, layer) => {
+      const v = fills[codeOf(f)];
+      if (v?.key) layer.on('click', () => c.handlers.current.onPickDong?.(v.key));
+      layer.bindTooltip(v?.tip ?? f.properties.name, { sticky: true, className: 'dong-tip' });
+    },
+  }).addTo(c.map);
 }
 
-function draw(c, { passGus, selGu, pins: pinData, padLeft }) {
+function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
   const { map } = c;
   const left = isDesktop() ? padLeft : 0;
 
   c.guLayer.setStyle((f) => {
-    const name = f.properties.name;
-    const sel = name === selGu;
-    const pass = passGus.has(name);
+    const code = codeOf(f);
+    const sel = code === selGu;
+    const pass = passGus.has(code);
     return {
       color: sel ? PRI : 'oklch(0.55 0.03 262)', weight: sel ? 2.5 : 0.8, dashArray: sel ? null : '3 3',
       fillColor: pass ? 'oklch(0.8 0.08 262)' : '#fff', fillOpacity: pass ? 0.18 : 0,
@@ -108,14 +130,15 @@ function draw(c, { passGus, selGu, pins: pinData, padLeft }) {
   });
   c.guLayer.eachLayer((layer) => {
     const el = layer.getTooltip()?.getElement();
-    if (el) el.style.opacity = layer.feature.properties.name === selGu ? 1 : 0.55;
+    if (el) el.style.opacity = codeOf(layer.feature) === selGu ? 1 : 0.55;
   });
 
   // 선택된 구 안의 동 경계
   if (c.dongLayer) { map.removeLayer(c.dongLayer); c.dongLayer = null; }
-  const guFeature = c.gu.features.find((f) => f.properties.name === selGu);
+  drawFills(c, fills);
+  const guFeature = c.gu.features.find((f) => codeOf(f) === selGu);
   if (c.dong && guFeature) {
-    const code = String(guFeature.properties.code);
+    const code = codeOf(guFeature);
     c.dongLayer = L.geoJSON(
       { type: 'FeatureCollection', features: c.dong.features.filter((f) => String(f.properties.code).slice(0, 5) === code) },
       { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 0.8, opacity: 0.45, fill: false } },
@@ -123,8 +146,8 @@ function draw(c, { passGus, selGu, pins: pinData, padLeft }) {
   }
 
   const pins = pinData
-    .map((p) => ({ ...p, ll: c.dongCenter[p.name] || guCenter(c, p.gu), top: !!p.rank && p.rank <= 10 }))
-    .filter((p) => p.ll);
+    .map((p) => ({ ...p, ll: p.geo ? c.dongCenter[p.geo] : null, top: !!p.rank && p.rank <= 10 }))
+    .filter((p) => p.ll); // 경계가 없는 동(geo_code null · 2013년 이후 신설)은 지도에서 뺀다
   pins.forEach((p) => {
     if (!p.top) return;
     p.t = (11 - p.rank) / 10;
@@ -139,7 +162,7 @@ function draw(c, { passGus, selGu, pins: pinData, padLeft }) {
   const pinBounds = () => L.latLngBounds(pins.map((p) => p.ll)).pad(0.15);
 
   // 핀 구성이 바뀌면 화면을 다시 맞춘다 (처음엔 서울 전체, 이후엔 핀 범위)
-  const key = pins.map((p) => p.name).sort().join(',');
+  const key = pins.map((p) => p.key).sort().join(',');
   if (key !== c.fitKey) {
     if (pins.length && !selPin) {
       map.invalidateSize();
@@ -150,11 +173,11 @@ function draw(c, { passGus, selGu, pins: pinData, padLeft }) {
   }
 
   // 선택이 바뀌면 그 동으로 날아가고 경계를 강조한다
-  const selKey = selPin ? selPin.name : '';
+  const selKey = selPin ? selPin.key : '';
   if (selKey !== c.lastSel) {
     if (c.focusLayer) { map.removeLayer(c.focusLayer); c.focusLayer = null; }
     if (selPin) {
-      const feature = c.dong?.features.find((f) => f.properties.name === selPin.name);
+      const feature = c.dong?.features.find((f) => codeOf(f) === selPin.geo);
       const bounds = feature ? L.geoJSON(feature).getBounds() : L.latLngBounds([selPin.ll, selPin.ll]);
       map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad() + 60], maxZoom: 15, duration: 0.45, easeLinearity: 0.5 });
       if (feature) c.focusLayer = L.geoJSON(feature, { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 2.5, fillColor: PRI, fillOpacity: 0.12 } }).addTo(map);
@@ -214,7 +237,7 @@ function renderPins(c) {
     marker.style.transform = `translate(${dx}px,${dy}px) scale(${k})`;
     marker.title = `${p.name} · ${p.gu} · ${p.score}점`;
     marker.innerHTML = pinHtml(p);
-    marker.addEventListener('click', (e) => { e.stopPropagation(); c.handlers.current.onPickDong?.(p.name); });
+    marker.addEventListener('click', (e) => { e.stopPropagation(); c.handlers.current.onPickDong?.(p.key); });
     wrap.appendChild(marker);
     frag.appendChild(wrap);
   });

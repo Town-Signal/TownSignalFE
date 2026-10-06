@@ -7,7 +7,8 @@ import './maps.css';
 
 /**
  * 서울 25개 자치구 벡터 지도 (추천 2단계).
- * gus: { [구]: { fill, hatch, dark, tip } }
+ * gus: { [구 geo_code(2013 통계청 5자리)]: { fill, hatch, dark, tip } } · selGu · onPick(geo_code)
+ * 경계 GeoJSON의 properties.code로 잇는다(이름으로 찾지 않는다, 명세 10.8).
  */
 export default function GuVectorMap({ gus, selGu, onPick }) {
   const boxRef = useRef(null);
@@ -38,11 +39,11 @@ export default function GuVectorMap({ gus, selGu, onPick }) {
     if (!geo || !size || size.w < 10 || size.h < 10) return null;
     const pad = size.w < 480 ? 8 : 16;
     const path = geoPath(geoMercator().fitExtent([[pad, pad], [size.w - pad, size.h - pad]], geo));
-    return geo.features.map((f) => ({ name: f.properties.name, d: path(f), c: path.centroid(f) }));
+    return geo.features.map((f) => ({ code: String(f.properties.code), name: f.properties.name, d: path(f), c: path.centroid(f) }));
   }, [geo, size]);
 
   const fontSize = size && size.w < 480 ? 9 : 11;
-  const sel = shapes?.find((s) => s.name === selGu);
+  const sel = shapes?.find((s) => s.code === selGu);
 
   return (
     <div ref={boxRef} className="gu-map">
@@ -56,14 +57,14 @@ export default function GuVectorMap({ gus, selGu, onPick }) {
             </pattern>
           </defs>
           {shapes.map((s) => {
-            const g = gus[s.name];
+            const g = gus[s.code];
             return (
               <path
-                key={s.name} d={s.d} className="gu-shape"
+                key={s.code} d={s.d} className="gu-shape"
                 fill={g ? (g.hatch ? 'url(#gu-hatch)' : g.fill) : 'oklch(0.95 0.004 262)'}
-                role="button" tabIndex={0} aria-pressed={s.name === selGu}
-                onClick={() => onPick(s.name)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(s.name); } }}
+                role="button" tabIndex={0} aria-pressed={s.code === selGu}
+                onClick={() => onPick(s.code)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(s.code); } }}
               >
                 <title>{s.name + (g?.tip ? ` · ${g.tip}` : '')}</title>
               </path>
@@ -73,9 +74,9 @@ export default function GuVectorMap({ gus, selGu, onPick }) {
           <g pointerEvents="none" fontSize={fontSize} textAnchor="middle">
             {shapes.map((s) => (
               <text
-                key={s.name} x={s.c[0]} y={s.c[1] + fontSize / 3}
-                fontWeight={s.name === selGu ? 800 : 600}
-                fill={gus[s.name]?.dark ? '#fff' : 'oklch(0.35 0.02 262)'}
+                key={s.code} x={s.c[0]} y={s.c[1] + fontSize / 3}
+                fontWeight={s.code === selGu ? 800 : 600}
+                fill={gus[s.code]?.dark ? '#fff' : 'oklch(0.35 0.02 262)'}
               >
                 {s.name.replace(/구$/, '')}
               </text>

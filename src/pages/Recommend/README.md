@@ -4,7 +4,7 @@
 
 - 파일: `Recommend.jsx`(단계 관리·로딩·저장), `Step1Input.jsx`, `Step2Gu.jsx`, `Step3Dong.jsx`, `Recommend.css`
 - 상태: 조건은 전역 `cond`(입력 즉시 저장), 단계는 URL `step`, 선택한 동은 URL `sel`. 로컬: `dir`(슬라이드 방향), `loading`, `view`(리스트/지도 — 2·3단계 공유)
-- 계산: `guBudgets(capital, area)` → 구별 예산, `ALL_DONGS` 중 통과한 구의 예측 가능한 동 → 추천 대상
+- API: ② 구별 예산 · ③ 공고 상세 · ④ 추천 · ⑤ 복원(`view.js`가 표시 모양으로 옮긴다). 지도는 geo_code로 잇는다
 
 ## 공통 요소
 
