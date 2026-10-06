@@ -4,7 +4,7 @@
 
 - 파일: `Dashboard.jsx`, `Dashboard.css`
 - 상태: `useAppState()`의 `favs`(dong_code), `favIndustry`, `addFav` · `removeFav`, `last` / 로컬 `undo`(방금 해제한 동 · 업종 · 원래 위치)
-- API: ① 마감임박 공고, ⑤ 최근 추천 갱신(ts-last의 rec_id), ⑫ 관심 카드(카드마다 dong_code + 그 동의 업종), 동 이름은 ⑧ · ⑨(`lib/dongNames`), 업종명은 ⑩
+- API: ① 마감임박 공고, ⑤ 최근 추천 갱신(ts-last의 rec_id), ⑫ 관심 카드(카드마다 dong_code + 그 동의 업종), 동 이름 · 구 이름도 ⑫(dong_name · district_name), 업종을 모르는 카드만 ⑧ · ⑨(`lib/dongNames`), 업종명은 ⑩
 
 ## 요소
 

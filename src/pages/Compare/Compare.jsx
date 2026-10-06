@@ -20,20 +20,21 @@ const won = (v) => fmt(manwon(v));
 
 /**
  * 비교표 행: [항목, 보조 설명, 셀 내용(⑭ 항목 → 표시), '최고' 판정값(클수록 좋음, 없으면 판정 안 함)].
- * '최고'는 받은 값끼리 견주는 표시용 비교일 뿐이다(10.6 가정). 임대비용은 낮은 쪽이 최고.
+ * '최고'는 받은 값끼리 견주는 표시용 비교일 뿐이다(10.6 가정). 임대료는 월세가 낮은 쪽이 최고.
  */
 const rowDefs = (hasRec) => [
   ['종합점수', '0~100', (d) => (d.total_score == null ? na('예측 불가') : { txt: String(d.total_score), className: 'score' }), (d) => d.total_score],
   ['예상 생존', '중앙값 · 80% 범위', (d) => (d.survival_p50 == null ? na('예측 불가') : {
-    txt: `${d.survival_p50}개월`, sub: d.survival_range && `${d.survival_range[0]}~${d.survival_range[1]}개월`,
+    txt: `${d.survival_p50}개월`, sub: d.survival_range && `80% 범위 ${d.survival_range[0]}~${d.survival_range[1]}개월`,
   }), (d) => d.survival_p50],
   ['예상 월매출', '중앙값 · 80% 범위', (d) => (d.sales_monthly_p50 == null ? na('예측 불가') : {
-    txt: `${won(d.sales_monthly_p50)}만`, sub: d.sales_monthly_range && `${won(d.sales_monthly_range[0])}~${won(d.sales_monthly_range[1])}만`,
+    txt: `${won(d.sales_monthly_p50)}만`, sub: d.sales_monthly_range && `80% 범위 ${won(d.sales_monthly_range[0])}~${won(d.sales_monthly_range[1])}만`,
   }), (d) => d.sales_monthly_p50],
   ['성장세', '최근 1년', (d) => (d.growth_rate == null ? na('정보 없음') : { txt: growthText(d.growth_rate), color: rateColor(d.growth_rate) }), (d) => d.growth_rate],
-  ['추정 초기 임대비용', '구 평균 · 보증금 + 월세 3개월', (d) => (d.estimated_rent_cost == null ? na('정보 없음') : {
-    txt: `${won(d.estimated_rent_cost)}만 원`, warn: d.rent_confidence === '낮음' && '신뢰도 낮음',
-  }), (d) => (d.estimated_rent_cost == null ? null : -d.estimated_rent_cost)],
+  ['임대료(월)', '구 평균 · 희망 면적 기준', (d) => (d.monthly_rent == null ? na('정보 없음') : {
+    txt: `월 ${won(d.monthly_rent)}만 원`, warn: d.rent_confidence === '낮음' && '신뢰도 낮음',
+    sub: d.estimated_rent_cost != null && `초기 임대비용 ${won(d.estimated_rent_cost)}만 원(보증금 + 월세 3개월)`,
+  }), (d) => (d.monthly_rent == null ? null : -d.monthly_rent)],
   ['예산 여유', hasRec ? '구 기준' : '추천 후 표시', (d) => {
     if (!hasRec) return { txt: '추천을 거치면 표시돼요', className: 'dash' };
     if (d.budget_margin == null) return na('정보 없음');
@@ -53,7 +54,7 @@ export default function Compare() {
   const fromIndustry = params.get('industry_code');
   const candidates = [...favs, ...fromDongs.filter((c) => !favs.includes(c))];
   const industryOf = (c) => (favs.includes(c) ? favIndustry(c) : fromIndustry || favIndustry(c));
-  const names = useDongNames(candidates);
+  const names = useDongNames(candidates.map((c) => [c, industryOf(c) ?? null])); // 업종 있으면 ⑫, 없으면 ⑧ · ⑨
   const label = (c) => names[c]?.dong_name ?? c;
 
   // null = 아직 직접 고르지 않음 → 첫 후보와 같은 업종 최대 4곳을 기본 선택
@@ -195,7 +196,7 @@ export default function Compare() {
                               {c.best && <span className="cmp-best">최고</span>}
                               {c.badge && <span className="badge badge-gray">{c.badge}</span>}
                               {c.warn && <span className="badge badge-warn">{c.warn}</span>}
-                              {c.sub && <span className="cmp-sub">80% 범위 {c.sub}</span>}
+                              {c.sub && <span className="cmp-sub">{c.sub}</span>}
                             </div>
                           </td>
                         ))}

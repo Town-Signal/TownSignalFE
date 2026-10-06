@@ -67,14 +67,15 @@ export default function Dashboard() {
   const undoTimer = useRef(null);
   useEffect(() => () => clearTimeout(undoTimer.current), []);
 
-  const names = useDongNames(favs);
+  // 이름은 카드가 받는 ⑫에서. 업종을 모르는 카드만 ⑧ · ⑨로 찾는다
+  const fallbackNames = useDongNames(favs.filter((c) => !favIndustry(c)).map((c) => [c, null]));
   const industries = useIndustries();
   const ranked = last?.top ?? [];
   const first = ranked[0];
 
   // ♡ 해제 → 토스트 + 되돌리기(원래 위치 · 업종 그대로 복구). 연속 해제 시 마지막 건만 되돌린다(10.2)
-  const unfav = (code) => {
-    setUndo({ code, industryCode: favIndustry(code), at: favs.indexOf(code), name: names[code]?.dong_name ?? code });
+  const unfav = (code, name) => {
+    setUndo({ code, industryCode: favIndustry(code), at: favs.indexOf(code), name });
     removeFav(code);
     clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndo(null), UNDO_MS);
@@ -176,8 +177,8 @@ export default function Dashboard() {
             <div className="fav-scroll">
               {favs.map((code) => (
                 <FavCard
-                  key={code} code={code} name={names[code]} industryCode={favIndustry(code)} industries={industries}
-                  onUnfav={() => unfav(code)}
+                  key={code} code={code} fallbackName={fallbackNames[code]} industryCode={favIndustry(code)} industries={industries}
+                  onUnfav={(name) => unfav(code, name)}
                 />
               ))}
             </div>
@@ -226,10 +227,15 @@ export default function Dashboard() {
   );
 }
 
-/** 관심 카드 1장(10.2 3): 카드마다 ⑫(dong_code + 그 동의 업종)를 매번 받는다. 수치는 저장하지 않는다(10.7) */
-function FavCard({ code, name, industryCode, industries, onUnfav }) {
+/**
+ * 관심 카드 1장(10.2 3): 카드마다 ⑫(dong_code + 그 동의 업종)를 매번 받는다. 수치는 저장하지 않는다(10.7).
+ * 이름도 ⑫의 dong_name · district_name. 업종을 모르면 fallbackName(⑧ · ⑨), 둘 다 없으면 코드
+ */
+function FavCard({ code, fallbackName, industryCode, industries, onUnfav }) {
   const p = useApiData(industryCode ? `/regions/predictions/${code}/${industryCode}` : null);
   const x = p.data;
+  const dongName = x?.dong_name ?? fallbackName?.dong_name ?? code;
+  const guName = x?.district_name ?? fallbackName?.district_name;
   const industryName = findIndustry(industries, industryCode)?.name;
   const noPred = x?.data_status === '예측 불가';
   const stat = (v) => (p.loading ? '…' : !x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
@@ -239,11 +245,11 @@ function FavCard({ code, name, industryCode, industries, onUnfav }) {
       <div className="fav-head">
         {/* 카드 전체가 상세로 가는 링크 (::after로 영역 확장) */}
         <Link to={detailPath(code, { industryCode })} className="fav-link">
-          <span className="fav-name"><b>{name?.dong_name ?? code}</b>{x?.data_status === '표본 부족' && <ResidentialBadge />}</span>
-          <span className="fav-gu">{[name?.district_name, industryName].filter(Boolean).join(' · ')}</span>
+          <span className="fav-name"><b>{dongName}</b>{x?.data_status === '표본 부족' && <ResidentialBadge />}</span>
+          <span className="fav-gu">{[guName, industryName].filter(Boolean).join(' · ')}</span>
         </Link>
         <div className="fav-score"><b>{x?.total_score ?? '—'}</b><span>종합점수</span></div>
-        <HeartButton on className="sm" onClick={onUnfav} />
+        <HeartButton on className="sm" onClick={() => onUnfav(dongName)} />
       </div>
       {!industryCode ? (
         <p className="fav-note">업종을 정하면 점수를 볼 수 있어요</p>
