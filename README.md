@@ -37,7 +37,7 @@ React 18 · JavaScript(JSX) · Vite 6 · react-router-dom 6 · Leaflet(OpenStree
    npm run build      # dist/
    ```
 
-운영(Vercel)에서는 `vercel.json`의 rewrites가 `/api/*`를 API 서버로 넘기고, 그 밖의 경로는 `index.html`로 보낸다(새로고침 대응). API 서버 주소는 아직 자리표시(`TODO-EC2-HOST`)다.
+운영(Vercel)에서는 `vercel.json`의 rewrites가 `/api/*`를 API 서버로 넘기고, 그 밖의 경로는 `index.html`로 보낸다(새로고침 대응). API 서버는 AWS EC2(시드니, 탄력적 IP `3.107.149.84:8000`)다. 브라우저는 Vercel의 HTTPS 주소만 보므로 혼합 콘텐츠 · CORS 문제가 없다.
 
 ## 원칙
 
