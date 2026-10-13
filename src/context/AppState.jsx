@@ -3,9 +3,10 @@ import { LS } from '../lib/storage';
 
 const AppState = createContext(null);
 
-// ts-cond 기본값은 null(빈 폼, 10.7). 저장된 조건이 없으면 1단계를 이 빈 값으로 연다 — 희망 면적만 기본 33㎡(7.1)
-const EMPTY_COND = {
-  age: '', capital: null, area: '33', career: 0, big: null, sub: null, industry_code: null, tags: [],
+// 저장된 조건이 없으면(최초 접속) 1단계를 이 기본값으로 연다 — 25세 · 경력 2년 · 자본금 3,000만 원 · 희망 면적 33㎡(7.1).
+// 업종 · 자격증은 비워 둔다. 사용자가 바꾸기 전에는 ts-cond에 저장하지 않는다(usePersist)
+const DEFAULT_COND = {
+  age: '25', capital: 3000, area: '33', career: 2, big: null, sub: null, industry_code: null, tags: [],
 };
 // 목업 시절 첫 진입에 자동 저장되던 데모 조건 — 사용자가 넣은 값이 아니므로 읽을 때 버린다
 const LEGACY_DEMO_COND = {
@@ -61,16 +62,16 @@ const loadLast = () => {
   return fixed;
 };
 
-// ts-cond: 기본값 null(빈 폼, 10.7). 목업 시절 자동 저장된 데모 조건은 버리고 지운다.
+// ts-cond: 저장된 값이 없으면 DEFAULT_COND. 목업 시절 자동 저장된 데모 조건은 버리고 지운다.
 // 목업 시절 값에는 industry_code가 없다 → null로 두고, 추천 화면이 ⑩ 목록을 받은 뒤 업종 이름으로 맞춘다
 const isLegacyDemo = (v) => Object.entries(LEGACY_DEMO_COND).every(([k, d]) => JSON.stringify(v[k]) === JSON.stringify(d));
 const loadCond = () => {
   const v = LS.get('ts-cond', null);
   let saved = v && typeof v === 'object' && !Array.isArray(v) ? v : null;
   if (v != null && (!saved || isLegacyDemo(saved))) { LS.remove('ts-cond'); saved = null; }
-  if (!saved) return EMPTY_COND;
+  if (!saved) return DEFAULT_COND;
   return {
-    ...EMPTY_COND, ...saved,
+    ...DEFAULT_COND, ...saved,
     tags: Array.isArray(saved.tags) ? saved.tags : [],
     industry_code: typeof saved.industry_code === 'string' ? saved.industry_code : null,
   };
