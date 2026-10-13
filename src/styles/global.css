@@ -225,8 +225,10 @@ a.active .tab-icon { fill-opacity: .18; stroke-width: 2.2; }
 .rangebar .track { position: absolute; top: 5px; left: 0; right: 0; height: 4px; border-radius: 2px; background: var(--line); }
 .rangebar .range { position: absolute; top: 3px; height: 8px; border-radius: 4px; background: var(--primary-line); transform-origin: left; animation: grow-x .6s var(--ease) both; }
 .rangebar .mid { position: absolute; top: 0; height: 14px; width: 3px; border-radius: 2px; background: var(--primary); margin-left: -1.5px; }
-.range-ends { position: relative; height: 16px; margin-top: 4px; font-size: 11px; color: oklch(0.62 0.015 262); }
-.range-ends span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.range-ends { display: flex; height: 16px; margin-top: 4px; font-size: 11px; color: oklch(0.62 0.015 262); white-space: nowrap; }
+.range-ends span:first-child { flex-shrink: 1; min-width: max-content; text-align: right; }
+.range-ends i { flex-shrink: 1; min-width: 6px; }
+.range-ends span:last-child { flex: none; }
 .metric-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 .metric-head b { font-size: 22px; color: var(--ink); }
 .metric-head.sm { font-size: 12px; margin-bottom: 6px; }

@@ -47,8 +47,9 @@ export function RangeBar({ range: [lo, mid, hi], max, ends }) {
       </div>
       {ends && (
         <div className="range-ends">
-          <span style={{ left: pct(lo) }}>{ends[0]}</span>
-          <span style={{ left: pct(hi) }}>{ends[1]}</span>
+          <span style={{ flexBasis: pct(lo) }}>{ends[0]}</span>
+          <i style={{ flexBasis: pct(hi - lo) }} />
+          <span>{ends[1]}</span>
         </div>
       )}
     </>
