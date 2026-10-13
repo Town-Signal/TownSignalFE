@@ -246,7 +246,8 @@ function Prediction({ industryCode, industryName, p }) {
   const x = p.data;
   const sv = range(x.survival_p10, x.survival_p50, x.survival_p90);
   const sl = range(manwon(x.sales_monthly_p10), manwon(x.sales_monthly_p50), manwon(x.sales_monthly_p90));
-  if (x.data_status === '예측 불가' || !sv || !sl) {
+  // 카드 전체를 가리는 건 예측 행이 없거나 생존 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
+  if (x.data_status === '예측 불가' || (!sv && !sl)) {
     return (
       <div className="pred-none">
         <span className="tag">예측 불가</span>
@@ -257,16 +258,28 @@ function Prediction({ industryCode, industryName, p }) {
   }
   return (
     <div className="pred-metrics">
-      <div>
-        <div className="metric-head"><span>예상 생존 기간</span><span><b>{sv[1]}</b>개월</span></div>
-        <RangeBar range={sv} max={sv[2] * 1.15} />
-        <div className="pred-range">80% 범위 {sv[0]}~{sv[2]}개월</div>
-      </div>
-      <div>
-        <div className="metric-head"><span>예상 월매출</span><span><b>{fmt(sl[1])}</b>만 원</span></div>
-        <RangeBar range={sl} max={sl[2] * 1.15} />
-        <div className="pred-range">80% 범위 {fmt(sl[0])}~{fmt(sl[2])}만 원</div>
-      </div>
+      {sv ? (
+        <div>
+          <div className="metric-head"><span>예상 생존 기간</span><span><b>{sv[1]}</b>개월</span></div>
+          <RangeBar range={sv} max={sv[2] * 1.15} />
+          <div className="pred-range">80% 범위 {sv[0]}~{sv[2]}개월</div>
+        </div>
+      ) : (
+        <div>
+          <div className="metric-head"><span>예상 생존 기간</span><span className="badge badge-gray">정보 없음</span></div>
+        </div>
+      )}
+      {sl ? (
+        <div>
+          <div className="metric-head"><span>예상 월매출</span><span><b>{fmt(sl[1])}</b>만 원</span></div>
+          <RangeBar range={sl} max={sl[2] * 1.15} />
+          <div className="pred-range">80% 범위 {fmt(sl[0])}~{fmt(sl[2])}만 원</div>
+        </div>
+      ) : (
+        <div>
+          <div className="metric-head"><span>예상 월매출</span><span className="badge badge-gray">정보 없음</span></div>
+        </div>
+      )}
       {x.data_status === '표본 부족' && <span className="pred-range">점포가 적은 주거 지역이라 예측 오차가 클 수 있어요.</span>}
     </div>
   );
