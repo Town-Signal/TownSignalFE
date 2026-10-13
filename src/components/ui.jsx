@@ -1,4 +1,6 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
+import { hasSurvival, survStyle } from '../lib/survival';
+
 const GROWTH_LOW_TIP = '확보 분기 4개 미만 또는 2024년 상권 기준 변경으로 증감률을 믿기 어려워요';
 
 export function HeartButton({ on, onClick, className = '' }) {
@@ -18,6 +20,20 @@ export function HeartButton({ on, onClick, className = '' }) {
 
 export const ResidentialBadge = ({ lg }) => <span className={`badge badge-res ${lg ? 'lg' : ''}`}>주거지역</span>;
 export const GrowthLowBadge = ({ title = GROWTH_LOW_TIP }) => <span className="badge badge-warn" title={title}>신뢰도 낮음</span>;
+
+/**
+ * 생존 칸 값(lib/survival의 survivalView 결과). 확률 · 점포 수 증감은 굵게, 없으면 회색 배지.
+ * 점포 수 증감은 성장세와 같은 색 · '신뢰도 낮음' 배지 · 안내 툴팁(명세 10.8)
+ */
+export function SurvivalValue({ v }) {
+  if (!hasSurvival(v)) return <span className="badge badge-gray">{v.main}</span>;
+  return (
+    <>
+      <b style={survStyle(v)} title={v.note}>{v.main}</b>
+      {v.low && <GrowthLowBadge />}
+    </>
+  );
+}
 
 /** 80% 확률 범위 막대: 하한~상한 bar + 중앙값 눈금. ends를 주면 아래에 하한/상한 라벨을 단다 */
 export function RangeBar({ range: [lo, mid, hi], max, ends }) {

@@ -12,7 +12,7 @@
 | 대시보드 | `/` | 최근 추천, 관심 창업지, 마감 임박 지원사업 |
 | 조건으로 추천받기 | `/recommend` | 조건 입력 → 자치구별 가용 예산 → 추천 행정동 |
 | 직접 찾아보기 | `/search` | 행정동 검색, 업종별 랭킹 지도 |
-| 상권 상세 | `/dong/{dong_code}?industry_code=` | 예상 매출 · 생존(80% 범위), 성장세, 예산 여유, 매출 추이 등 |
+| 상권 상세 | `/dong/{dong_code}?industry_code=` | 예상 매출(80% 범위) · 생존 확률(또는 점포 수 증감), 성장세, 예산 여유, 매출 추이 등 |
 | 상권 비교 | `/compare` | 관심 동네 1~4곳 비교 |
 
 React 18 · JavaScript(JSX) · Vite 6 · react-router-dom 6 · Leaflet · d3-geo. 상태는 React Context, 사용자 기록은 localStorage.

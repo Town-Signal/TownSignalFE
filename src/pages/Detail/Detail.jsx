@@ -5,9 +5,10 @@ import { useApiData } from '../../hooks/useApiData';
 import { useApiError } from '../../hooks/useApiError';
 import { findIndustry, loadMasters } from '../../lib/masters';
 import { isDongCode } from '../../lib/paths';
-import { fmt, growthText, manwon, quarterText, rentQuarterText, requestIdText, signed } from '../../lib/format';
+import { fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, signed } from '../../lib/format';
+import { hasSurvival, survivalView } from '../../lib/survival';
 import { MobileHeader } from '../../components/Layout';
-import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge } from '../../components/ui';
+import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
 import LegacyDongRedirect from './LegacyDongRedirect';
 import SalesTrend from './SalesTrend';
 import FootTraffic from './FootTraffic';
@@ -15,7 +16,6 @@ import './Detail.css';
 
 // ④ disclaimer와 같은 문구. 상세 화면용 API 필드가 없어 상수로 둔다(QUESTIONS)
 const DISCLAIMER = '본 서비스의 추정 임대비용은 자치구 평균 기준이므로 동일 자치구 내 행정동은 금액이 동일하게 표시되며, 권리금·인테리어·집기 비용은 포함되지 않습니다. 예측 결과는 참고 정보이며 최종 판단과 책임은 사용자에게 있습니다.';
-const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
 const range = (lo, mid, hi) => (lo == null || mid == null || hi == null ? null : [lo, mid, hi]);
 
 export default function Detail() {
@@ -135,7 +135,7 @@ function DongDetail({ code }) {
 
         <div className="detail-grid">
           <section className="card detail-card pred">
-            <h2 className="card-title">예상 생존 기간 · 예상 월매출</h2>
+            <h2 className="card-title">생존 · 예상 월매출</h2>
             <Prediction industryCode={industryCode} industryName={industryName} p={p} />
             <p className="disclaimer">{DISCLAIMER}</p>
           </section>
@@ -244,10 +244,10 @@ function Prediction({ industryCode, industryName, p }) {
       : <BoxMsg title="예측을 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(p.error)}`} onRetry={p.retry} />;
   }
   const x = p.data;
-  const sv = range(x.survival_p10, x.survival_p50, x.survival_p90);
+  const sv = survivalView(x); // 3년 생존 확률 → 점포 수 증감 → 정보 없음(10.8)
   const sl = range(manwon(x.sales_monthly_p10), manwon(x.sales_monthly_p50), manwon(x.sales_monthly_p90));
-  // 카드 전체를 가리는 건 예측 행이 없거나 생존 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
-  if (x.data_status === '예측 불가' || (!sv && !sl)) {
+  // 카드 전체를 가리는 건 예측 행이 없거나 생존 칸 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
+  if (x.data_status === '예측 불가' || (!hasSurvival(sv) && !sl)) {
     return (
       <div className="pred-none">
         <span className="tag">예측 불가</span>
@@ -258,17 +258,12 @@ function Prediction({ industryCode, industryName, p }) {
   }
   return (
     <div className="pred-metrics">
-      {sv ? (
-        <div>
-          <div className="metric-head"><span>예상 생존 기간</span><span><b>{sv[1]}</b>개월</span></div>
-          <RangeBar range={sv} max={sv[2] * 1.15} />
-          <div className="pred-range">80% 범위 {sv[0]}~{sv[2]}개월</div>
-        </div>
-      ) : (
-        <div>
-          <div className="metric-head"><span>예상 생존 기간</span><span className="badge badge-gray">정보 없음</span></div>
-        </div>
-      )}
+      {/* 생존은 확률 · 증감 값이라 80% 범위 막대를 그리지 않는다 */}
+      <div>
+        <div className="metric-head"><span>{sv.label}</span><span><SurvivalValue v={sv} /></span></div>
+        {sv.sub && <div className="pred-range">{sv.sub}</div>}
+        {sv.note && <div className="pred-range">{sv.note}</div>}
+      </div>
       {sl ? (
         <div>
           <div className="metric-head"><span>예상 월매출</span><span><b>{fmt(sl[1])}</b>만 원</span></div>

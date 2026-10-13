@@ -5,7 +5,8 @@ import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
 import { findIndustry } from '../../lib/masters';
 import { detailPath, isDongCode } from '../../lib/paths';
-import { fmt, growthText, manwon, quarterText, requestIdText, signed } from '../../lib/format';
+import { fmt, growthText, manwon, quarterText, rateColor, requestIdText, signed } from '../../lib/format';
+import { hasSurvival, survStyle, survivalView } from '../../lib/survival';
 import { useApiError } from '../../hooks/useApiError';
 import { useDongNames } from '../../hooks/useDongNames';
 import { useIndustries } from '../../hooks/useIndustries';
@@ -15,7 +16,6 @@ import './Compare.css';
 
 const MAX = 4;
 const na = (text) => ({ badge: text });
-const rateColor = (rate) => (rate >= 0 ? 'var(--green)' : 'var(--down)');
 const won = (v) => fmt(manwon(v));
 
 /**
@@ -24,9 +24,13 @@ const won = (v) => fmt(manwon(v));
  */
 const rowDefs = (hasRec) => [
   ['종합점수', '0~100', (d) => (d.total_score == null ? na('예측 불가') : { txt: String(d.total_score), className: 'score' }), (d) => d.total_score],
-  ['예상 생존', '중앙값 · 80% 범위', (d) => (d.survival_p50 == null ? na('예측 불가') : {
-    txt: `${d.survival_p50}개월`, sub: d.survival_range && `80% 범위 ${d.survival_range[0]}~${d.survival_range[1]}개월`,
-  }), (d) => d.survival_p50],
+  // 생존 칸: 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8). '최고'는 확률끼리만(점포 수 증감엔 없음)
+  ['생존', '3년 생존 확률 · 없으면 점포 수 증감', (d) => {
+    const v = survivalView(d);
+    if (!hasSurvival(v)) return na(v.main);
+    const sub = v.kind === 'trend' ? `점포 수 증감 · ${v.sub}` : v.sub;
+    return { txt: v.main, sub, color: survStyle(v)?.color, warn: v.low && '신뢰도 낮음' };
+  }, (d) => d.survival_prob_3y],
   ['예상 월매출', '중앙값 · 80% 범위', (d) => (d.sales_monthly_p50 == null ? na('예측 불가') : {
     txt: `${won(d.sales_monthly_p50)}만`, sub: d.sales_monthly_range && `80% 범위 ${won(d.sales_monthly_range[0])}~${won(d.sales_monthly_range[1])}만`,
   }), (d) => d.sales_monthly_p50],

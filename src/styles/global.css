@@ -231,6 +231,8 @@ a.active .tab-icon { fill-opacity: .18; stroke-width: 2.2; }
 .metric-head b { font-size: 22px; color: var(--ink); }
 .metric-head.sm { font-size: 12px; margin-bottom: 6px; }
 .metric-head.sm b { font-size: 16px; }
+/* 생존 칸 보조 줄(1년 생존 확률 · 점포 수 기준) */
+.surv-sub { font-size: 11px; font-weight: 500; color: var(--muted); }
 
 .lv-legend { display: flex; gap: 8px; font-size: 11px; color: var(--muted); cursor: help; }
 .lv-legend span { display: flex; align-items: center; gap: 3px; }

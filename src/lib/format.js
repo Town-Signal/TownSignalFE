@@ -13,6 +13,12 @@ export const growthText = (rate) => {
   return `${pct > 0 ? '+' : ''}${pct}%`;
 };
 
+/** 증감률 색 — 상승 초록 · 하락 빨강, 없으면 흐리게(성장세 · 점포 수 증감 공통) */
+export const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
+
+/** 생존 확률(0.793) → '79%'. 없으면 null */
+export const probText = (p) => (p == null ? null : `${Math.round(p * 100)}%`);
+
 /** 'YYYY-MM-DD' → 'MM.DD' */
 export const shortDate = (iso) => (iso ? iso.slice(5).replace('-', '.') : '');
 

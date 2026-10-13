@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
 import { detailPath } from '../../lib/paths';
-import { daysUntil, fmt, growthText, manwon, requestIdText, shortDate } from '../../lib/format';
+import { daysUntil, fmt, growthText, manwon, rateColor, requestIdText, shortDate } from '../../lib/format';
+import { survStyle, survivalView } from '../../lib/survival';
 import { simulatedFailure, toApiError } from '../../lib/errors';
 import { useApiError } from '../../hooks/useApiError';
 import { useApiData } from '../../hooks/useApiData';
@@ -17,7 +18,6 @@ import './Dashboard.css';
 
 const UNDO_MS = 4000;
 const URGENT_DAYS = 7;
-const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
 
 /** ① 공고 한 줄(표시용): D-day · 마감일 · 최대 금액(만 원) */
 const toNotice = (p) => {
@@ -72,6 +72,7 @@ export default function Dashboard() {
   const industries = useIndustries();
   const ranked = last?.top ?? [];
   const first = ranked[0];
+  const firstSurv = survivalView(first); // ts-last.top → ⑤ items로 교체(생존 칸 규칙은 lib/survival)
 
   // ♡ 해제 → 토스트 + 되돌리기(원래 위치 · 업종 그대로 복구). 연속 해제 시 마지막 건만 되돌린다(10.2)
   const unfav = (code, name) => {
@@ -113,7 +114,13 @@ export default function Dashboard() {
                     <div className="dash-first-score"><b>{first.score ?? '—'}</b><span>종합점수</span></div>
                   </div>
                   <dl className="dash-first-stats">
-                    <div><dt>예상 생존</dt><dd>{first.survival_p50 == null ? '정보 없음' : `${first.survival_p50}개월`}</dd></div>
+                    <div>
+                      <dt>{firstSurv.label}</dt>
+                      <dd style={survStyle(firstSurv)} title={firstSurv.note}>
+                        {firstSurv.main}{firstSurv.sub && <span className="surv-sub"> {firstSurv.sub}</span>}
+                        {firstSurv.low && <> <GrowthLowBadge /></>}
+                      </dd>
+                    </div>
                     <div><dt>예상 월매출</dt><dd>{first.sales_monthly_p50 == null ? '정보 없음' : `월 ${fmt(manwon(first.sales_monthly_p50))}만`}</dd></div>
                     <div><dt>성장세</dt><dd style={{ color: rateColor(first.growth_rate) }}>{growthText(first.growth_rate) ?? '—'}</dd></div>
                   </dl>
@@ -238,6 +245,7 @@ function FavCard({ code, fallbackName, industryCode, industries, onUnfav }) {
   const guName = x?.district_name ?? fallbackName?.district_name;
   const industryName = findIndustry(industries, industryCode)?.name;
   const noPred = x?.data_status === '예측 불가';
+  const sv = survivalView(x); // 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
   const stat = (v) => (p.loading ? '…' : !x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
 
   return (
@@ -257,7 +265,12 @@ function FavCard({ code, fallbackName, industryCode, industries, onUnfav }) {
         <p className="fav-note">불러오지 못했어요 <button type="button" onClick={p.retry}>다시 시도</button></p>
       ) : (
         <dl className="fav-stats">
-          <div><dt>생존</dt><dd>{stat(x?.survival_p50 == null ? null : `${x.survival_p50}개월`)}</dd></div>
+          <div>
+            <dt>{sv.label}</dt>
+            <dd style={survStyle(sv)} title={sv.note}>{p.loading ? '…' : !x ? '—' : sv.main}</dd>
+            {!p.loading && x && sv.sub && <span className="surv-sub">{sv.sub}</span>}
+            {sv.low && <GrowthLowBadge />}
+          </div>
           <div><dt>월매출</dt><dd>{stat(x?.sales_monthly_p50 == null ? null : `${fmt(manwon(x.sales_monthly_p50))}만`)}</dd></div>
           <div>
             <dt>성장세</dt>

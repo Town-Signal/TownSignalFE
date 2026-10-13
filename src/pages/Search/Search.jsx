@@ -6,7 +6,8 @@ import { toApiError } from '../../lib/errors';
 import { loadDongGeo } from '../../lib/geo';
 import { findIndustry, groupIndustries, loadMasters } from '../../lib/masters';
 import { detailPath } from '../../lib/paths';
-import { fmt, growthText, manwon, requestIdText } from '../../lib/format';
+import { fmt, growthText, manwon, rateColor, requestIdText } from '../../lib/format';
+import { survStyle, survivalView } from '../../lib/survival';
 import { useApiData } from '../../hooks/useApiData';
 import { MobileHeader } from '../../components/Layout';
 import { BoxMsg, GrowthLowBadge, HeartButton, ResidentialBadge } from '../../components/ui';
@@ -22,7 +23,6 @@ const NO_GEO = '지도에 표시되지 않음';
 // 지도 색 단계(⑱ total_score). 그리기용 구간일 뿐 판정에 쓰지 않는다. TODO(가정): 구간 경계
 const SCORE_STEPS = [[80, 'oklch(0.45 0.16 262)'], [65, 'oklch(0.56 0.14 262)'], [50, 'oklch(0.68 0.1 262)'], [35, 'oklch(0.8 0.06 262)'], [-1, 'oklch(0.9 0.03 262)']];
 const scoreFill = (s) => SCORE_STEPS.find(([min]) => s >= min)[1];
-const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
 const rangeText = (lo, hi, unit) => (lo == null || hi == null ? null : `${lo}~${hi}${unit}`);
 
 /** ⑦ · ⑨ · ⑱ 항목을 같은 모양으로 */
@@ -324,7 +324,7 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
     );
   }
   const noPred = p.data_status === '예측 불가';
-  const surv = rangeText(p.survival_p10, p.survival_p90, '개월');
+  const sv = survivalView(p); // 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
   const sales = rangeText(fmt(manwon(p.sales_monthly_p10)), fmt(manwon(p.sales_monthly_p90)), '만');
   return (
     <div className="search-result">
@@ -339,7 +339,10 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
         <div className="score"><div><b>{p.total_score ?? '—'}</b><span>종합점수</span></div><HeartButton on={fav} onClick={onFav} /></div>
       </div>
       <div className="stats">
-        <div className="surv"><span>예상 생존</span><b>{noPred || p.survival_p50 == null ? '예측 불가' : `${p.survival_p50}개월`}</b>{!noPred && surv && <span>80% 범위 {surv}</span>}</div>
+        <div className="surv" title={sv.note}>
+          <span>{sv.label}</span><b style={survStyle(sv)}>{sv.main}</b>{sv.sub && <span>{sv.sub}</span>}
+          {sv.low && <GrowthLowBadge />}
+        </div>
         <div className="sales"><span>예상 월매출</span><b>{noPred || p.sales_monthly_p50 == null ? '예측 불가' : `${fmt(manwon(p.sales_monthly_p50))}만`}</b>{!noPred && p.sales_monthly_p10 != null && <span>80% 범위 {sales}</span>}</div>
         <div className="growth">
           <span>성장세</span>

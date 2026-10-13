@@ -4,7 +4,7 @@ import { useAppState } from '../../context/AppState';
 import { detailPath } from '../../lib/paths';
 import { fmt, signed } from '../../lib/format';
 import { DESKTOP, useMediaQuery } from '../../hooks/useMediaQuery';
-import { BackIcon, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, ViewToggle } from '../../components/ui';
+import { BackIcon, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, SurvivalValue, ViewToggle } from '../../components/ui';
 import { SORTS, sortDongs } from './view';
 
 const DongLeafletMap = lazy(() => import('../../components/DongLeafletMap'));
@@ -21,8 +21,15 @@ function Metric({ label, range, max, mid, unit, ends, small }) {
     </div>
   );
 }
+/** 생존 칸 — 3년 생존 확률(보조 1년) 또는 점포 수 증감. 확률에는 80% 범위 막대를 그리지 않는다(명세 10.8) */
+const SurvMetric = ({ d, small, note }) => (
+  <div>
+    <div className={`metric-head ${small ? 'sm' : ''}`}><span>{d.surv.label}</span><span><SurvivalValue v={d.surv} /></span></div>
+    {d.surv.sub && <div className="fine">{d.surv.sub}</div>}
+    {note && d.surv.note && <div className="fine">{d.surv.note}</div>}
+  </div>
+);
 // 막대 축 최댓값은 받은 목록의 80% 범위 상단으로 잡는다(그리기용 배율)
-const SurvMetric = ({ d, max, small }) => <Metric label="예상 생존 기간" range={d.sv} max={max} mid={d.sv?.[1]} unit="개월" ends={d.sv && [d.sv[0], `${d.sv[2]}개월`]} small={small} />;
 const SalesMetric = ({ d, max, small }) => <Metric label="예상 월매출" range={d.sl} max={max} mid={d.sl && fmt(d.sl[1])} unit="만 원" ends={d.sl && [fmt(d.sl[0]), fmt(d.sl[2])]} small={small} />;
 
 /** "왜 추천됐나요?" — 요인별 기여 점수 */
@@ -31,7 +38,7 @@ function Factors({ d, compact }) {
     <>
       <div className="factor-stack">{d.factors.map((f) => <i key={f.label} style={{ background: f.color, width: `${f.contrib}%` }} />)}</div>
       {compact && <span className="factor-sum">가중치 {d.weightsTxt} · 합계 {d.score}점</span>}
-      {!d.hasGrowth && <span className="factor-warn">성장세 데이터가 없어 매출 50 · 생존 50으로 계산했어요</span>}
+      {d.missingTxt && <span className="factor-warn">{d.missingTxt} 데이터가 없어 나머지 지표로 계산했어요(가중치 {d.weightsTxt})</span>}
       {d.factors.map((f) => (
         <div key={f.label} className={`factor ${compact ? 'compact' : ''}`}>
           <span className="label"><i style={{ background: f.color }} />{f.label}</span>
@@ -54,7 +61,6 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
 
   // 받은 목록 재정렬만 한다(7.8). 순번은 현재 탭 기준
   const sorted = useMemo(() => sortDongs(dongs, sort).map((d, i) => ({ ...d, rank: i + 1 })), [dongs, sort]);
-  const survMax = useMemo(() => Math.max(1, ...dongs.map((d) => d.sv?.[2] ?? 0)) * 1.05, [dongs]);
   const salesMax = useMemo(() => Math.max(1, ...dongs.map((d) => d.sl?.[2] ?? 0)) * 1.05, [dongs]);
 
   // 선택은 dong_code로(이름이 같은 동이 여러 구에 있다 — 신사동)
@@ -126,11 +132,11 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
                 <div className="score"><div><b style={{ color: sel.scoreColor }}>{sel.score}</b><span>종합점수</span></div><HeartButton on={isFav(sel)} onClick={onFav(sel)} /></div>
               </div>
               <div className="tiles">
-                <div><span>예상 생존 기간</span><b>{sel.survRange}</b></div>
+                <div><span>{sel.surv.label}</span><SurvivalValue v={sel.surv} /></div>
                 <div><span>예상 월매출</span><b>{sel.salesRange}</b></div>
                 <div><span>예산 여유 · 구 기준</span><Margin d={sel} /></div>
               </div>
-              <span className="fine">범위는 80% 범위예요. {disclaimer}</span>
+              <span className="fine">월매출 범위는 80% 범위예요. {disclaimer}</span>
               <Link to={href(sel)} className="btn-primary">상세 분석 보기 ›</Link>
             </div>
           </div>
@@ -149,7 +155,7 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
                 <span className="rank">{d.rank}</span>
                 <div className="info">
                   <div className="name"><b>{d.name}</b><span>{d.gu}</span>{d.residential && <ResidentialBadge />}</div>
-                  <div className="ranges"><span>생존 <b>{d.survRange}</b></span><span>월매출 <b>{d.salesRange}</b></span></div>
+                  <div className="ranges"><span>{d.surv.shortLabel} <b>{d.surv.short}</b></span><span>월매출 <b>{d.salesRange}</b></span></div>
                   <div className="ranges"><span>예산 여유 {d.margin == null ? <b>정보 없음</b> : <b className="margin">{signed(d.margin)}</b>}</span></div>
                 </div>
                 <div className="score"><b style={{ color: d.scoreColor }}>{d.score}</b><HeartButton on={isFav(d)} className="sm40" onClick={onFav(d)} /></div>
@@ -166,7 +172,7 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
               <div className="score"><div><b style={{ color: sel.scoreColor }}>{sel.score}</b><span>종합점수 / 100</span></div><HeartButton on={isFav(sel)} className="lg" onClick={onFav(sel)} /></div>
             </div>
             <div className="metrics">
-              <div><SurvMetric d={sel} max={survMax} /><span className="fine">80% 범위 {sel.survRange}</span></div>
+              <SurvMetric d={sel} note />
               <div><SalesMetric d={sel} max={salesMax} /><span className="fine">80% 범위 {sel.salesRange}</span></div>
             </div>
             <div className="tiles lg">
@@ -200,7 +206,7 @@ export default function Step3Dong({ sub, industryCode, budgets, dongs, passCount
                   </div>
                   <div className="score"><div><b style={{ color: d.scoreColor }}>{d.score}</b><span>종합점수</span></div><HeartButton on={isFav(d)} onClick={onFav(d)} /></div>
                 </div>
-                <SurvMetric d={d} max={survMax} small />
+                <SurvMetric d={d} small />
                 <SalesMetric d={d} max={salesMax} small />
                 <div className="margin-row"><span>예산 여유 <span>· {d.gu} 기준</span></span><Margin d={d} unit=" 원" /></div>
                 <button type="button" className="why-toggle" aria-expanded={open} onClick={() => setOpenDong(open ? null : d.code)}>

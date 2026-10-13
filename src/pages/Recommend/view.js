@@ -1,5 +1,6 @@
 // 추천 1 · 2 · 3단계 — API 응답을 화면 모양으로 옮긴다. 예산 · 점수 · 예측은 계산하지 않는다(명세 10.8).
-import { fmt, growthText, manwon, signed } from '../../lib/format';
+import { fmt, growthText, manwon, probText, signed } from '../../lib/format';
+import { survivalView } from '../../lib/survival';
 
 const MANWON = 10000;
 
@@ -82,7 +83,7 @@ function factors(d) {
   const pct = { sales: b.sales_percentile, survival: b.survival_percentile, growth: b.growth_percentile };
   const raw = {
     sales: d.sales_monthly_p50 == null ? '—' : `월 ${fmt(manwon(d.sales_monthly_p50))}만 원`,
-    survival: d.survival_p50 == null ? '—' : `${d.survival_p50}개월`,
+    survival: d.survival_prob_3y == null ? '—' : `3년 ${probText(d.survival_prob_3y)}`,
     growth: growthText(d.growth_rate) ?? '데이터 없음',
   };
   return ['sales', 'survival', 'growth'].map((k) => {
@@ -100,7 +101,6 @@ const rangeOrNull = (lo, mid, hi) => (lo == null || mid == null || hi == null ? 
 
 /** ④ recommendations[] → 3단계 카드 모양 */
 export function toDongView(d) {
-  const sv = rangeOrNull(d.survival_range[0], d.survival_p50, d.survival_range[1]);
   const sl = rangeOrNull(
     manwon(d.sales_monthly_range[0]), manwon(d.sales_monthly_p50), manwon(d.sales_monthly_range[1]),
   );
@@ -119,8 +119,8 @@ export function toDongView(d) {
     scoreColor: scoreColor(score),
     residential: d.is_residential,
     sampleShort: d.data_status === '표본 부족',
-    sv, sl,
-    survRange: sv ? `${sv[0]}~${sv[2]}개월` : '예측 불가',
+    sl,
+    surv: survivalView(d), // 생존 칸: 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가
     salesRange: sl ? `${fmt(sl[0])}~${fmt(sl[2])}만` : '예측 불가',
     margin,
     growth: d.growth_rate,
@@ -130,10 +130,13 @@ export function toDongView(d) {
     growthLowWhy: d.growth_confidence === '낮음' ? '확보된 분기가 적거나 상권 기준이 바뀌어 증감률을 믿기 어려워요' : undefined,
     weightsTxt: ['sales', 'survival', 'growth'].filter((k) => weights[k] > 0)
       .map((k) => `${FACTOR_LABELS[k]} ${Math.round(weights[k] * 100)}`).join(' · '),
+    // 결측이라 가중치가 0이 된 지표(서버 applied_weights 그대로)
+    missingTxt: ['sales', 'survival', 'growth'].filter((k) => !weights[k]).map((k) => FACTOR_LABELS[k]).join(' · '),
     factors: factors(d),
     // 정렬 탭용 원값(서버 값 그대로)
     sortKeys: {
-      score, surv: d.survival_p50, sales: d.sales_quarterly_p50, growth: d.growth_rate,
+      // 생존순 = 3년 생존 확률(7.8). 점포 수 증감은 정렬에 쓰지 않는다(7.12)
+      score, surv: d.survival_prob_3y, sales: d.sales_quarterly_p50, growth: d.growth_rate,
     },
   };
 }
@@ -174,7 +177,10 @@ export const lastTopItem = (d) => ({
   name: d.dong_name,
   gu: d.district_name,
   score: d.score_breakdown ? d.score_breakdown.total_score : d.total_score,
-  survival_p50: d.survival_p50,
+  survival_prob_1y: d.survival_prob_1y,
+  survival_prob_3y: d.survival_prob_3y,
+  store_trend: d.store_trend ?? null,
+  data_status: d.data_status,
   sales_monthly_p50: d.sales_monthly_p50,
   growth_rate: d.growth_rate,
 });
