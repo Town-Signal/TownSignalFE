@@ -61,6 +61,26 @@ function Programs({ list }) {
   ));
 }
 
+/** 그 밖의 지원 — 예산에 넣지 않은 현물 · 교육 등. Programs와 같은 .program 행에 유형 배지를 붙인다 */
+function OtherSupports({ list }) {
+  return list.map((o) => (
+    <div key={o.id} className="other">
+      <div className="program">
+        <span className="other-name">
+          {o.name}
+          {o.seoulWide && <span className="badge badge-gray">서울 전체 · 전국</span>}
+        </span>
+        {o.url && <a href={o.url} target="_blank" rel="noopener noreferrer">공고 ↗</a>}
+      </div>
+      {o.types.length > 0 && (
+        <div className="other-types">{o.types.map((t) => <span key={t} className="badge badge-gray">{t}</span>)}</div>
+      )}
+    </div>
+  ));
+}
+
+const otherCountText = (counts) => Object.entries(counts).map(([t, n]) => `${t} ${n}`).join(' · ');
+
 const WARNING_BANNERS = {
   SUPPORT_PROGRAM_UNAVAILABLE: '지원사업 정보를 불러오지 못해 지원금 없이 계산했어요. 잠시 후 다시 계산해 보세요.',
 };
@@ -178,6 +198,9 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                       {!g.isError && <BudgetBar g={g} />}
                       {g.isFail && <span className="why">탈락 · {failReason(g)}</span>}
                       {g.isNone && <span className="why">매칭된 지원 사업이 없어 자본금만으로 계산했어요</span>}
+                      {g.others.length > 0 && (
+                        <span className="others"><b>다른 지원</b>{otherCountText(g.otherCounts) || `${g.others.length}건`}</span>
+                      )}
                     </button>
                     {g.isError && (
                       <div className="s2-error">
@@ -190,7 +213,11 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                         <div>
                           <span className="h ok">받을 수 있는 지원 사업</span>
                           <Programs list={g.programs} />
-                          {g.isNone && <span className="muted">현재 조건에 맞는 사업이 없어요. 나이·업종 조건을 확인해 보세요.</span>}
+                          {g.isNone && (
+                            <span className="muted">
+                              {g.others.length > 0 ? '현금 지원은 없지만 아래 다른 지원이 있어요.' : '현재 조건에 맞는 사업이 없어요. 나이·업종 조건을 확인해 보세요.'}
+                            </span>
+                          )}
                         </div>
                         {g.excluded.length > 0 && (
                           <div>
@@ -201,6 +228,12 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                                 <span>{p.reason}</span>
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {g.others.length > 0 && (
+                          <div className="others-col">
+                            <span className="h">그 밖의 지원 <span className="sub">(예산에는 넣지 않았어요)</span></span>
+                            <OtherSupports list={g.others} />
                           </div>
                         )}
                         <div className="foot">

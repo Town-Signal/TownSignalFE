@@ -171,6 +171,14 @@
 .s2-detail .h.ok { color: var(--green); }
 .s2-detail .excluded { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
 .s2-detail .excluded .program { color: var(--muted-2); text-decoration: line-through; }
+.s2-row .others { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+.s2-row .others b { font-weight: 600; color: var(--ink-2); }
+.s2-detail .others-col { grid-column: 1 / -1; }
+.s2-detail .h .sub { font-weight: 500; }
+.s2-detail .other { display: flex; flex-direction: column; gap: 4px; }
+.s2-detail .other-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; overflow-wrap: anywhere; }
+.s2-detail .other a { flex: none; font-size: 12px; font-weight: 600; color: var(--primary); }
+.s2-detail .other-types { display: flex; flex-wrap: wrap; gap: 4px; }
 .s2-detail .foot { grid-column: 1 / -1; border-top: 1px solid oklch(0.92 0.006 262); padding-top: 10px; flex-direction: row; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); }
 
 .s2-map { position: relative; overflow: hidden; height: clamp(340px, 62cqw, 560px); animation: rise .45s var(--ease) both; }
