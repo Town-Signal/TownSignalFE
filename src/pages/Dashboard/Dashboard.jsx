@@ -47,7 +47,7 @@ function NoticeRow({ n }) {
         {n.closed ? <span className="dday closed">마감</span>
           : n.dday != null ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>
             : <span className="dday open">모집 중</span>}
-        <span className="body"><b>{n.title}</b><span>{n.org} · {n.amt}</span></span>
+        <span className="body"><b>{n.title}</b><span>{n.org} · {n.amt}{n.closed && <span className="deadline-inline"> · {n.deadlineTxt}</span>}</span></span>
         <span className="deadline">{n.deadlineTxt}</span>
         <span className="ext" aria-hidden="true">↗</span>
       </a>
