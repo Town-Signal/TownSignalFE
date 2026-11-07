@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
-import { fmt, manwon, requestIdText, shortDate } from '../../lib/format';
+import { daysUntil, fmt, manwon, requestIdText, shortDate } from '../../lib/format';
 import { BackIcon, ViewToggle } from '../../components/ui';
 
 const GuVectorMap = lazy(() => import('../../components/GuVectorMap'));
@@ -38,11 +38,18 @@ function ProgramDetail({ id }) {
     );
   }
   const p = state.data;
-  const period = p.always_open ? '상시모집' : `${p.apply_start ? shortDate(p.apply_start) : ''} ~ ${shortDate(p.apply_end)}`;
+  const period = p.apply_end ? `${p.apply_start ? shortDate(p.apply_start) : ''} ~ ${shortDate(p.apply_end)}` : null;
+  // ③에는 모집 상태가 없어 마감일로 본다. 마감일 당일은 모집 중
+  const closed = p.apply_end != null && daysUntil(p.apply_end) < 0;
   return (
     <div className="program-detail">
       <span>{p.agency ?? '주관기관 정보 없음'} · {p.district_name} · 최대 {fmt(manwon(p.amount_max))}만 원</span>
-      <span>접수 {period}</span>
+      {period && (
+        <span className="program-period">
+          {closed && <span className="badge badge-closed">마감 · 매년 모집</span>}
+          접수 {period}
+        </span>
+      )}
       {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer">공고 원문 보기 ↗</a>}
     </div>
   );
@@ -63,7 +70,10 @@ function Programs({ list }) {
 
 /** 그 밖의 지원 — 예산에 넣지 않은 현물 · 교육 등. Programs와 같은 .program 행에 유형 배지를 붙인다 */
 function OtherSupports({ list }) {
-  return list.map((o) => (
+  return (
+    <div className="s2-others">
+      <span className="h">그 밖의 지원 <span className="sub">(예산에는 넣지 않았어요)</span></span>
+      {list.map((o) => (
     <div key={o.id} className="other">
       <div className="program">
         <span className="other-name">
@@ -76,7 +86,9 @@ function OtherSupports({ list }) {
         <div className="other-types">{o.types.map((t) => <span key={t} className="badge badge-gray">{t}</span>)}</div>
       )}
     </div>
-  ));
+      ))}
+    </div>
+  );
 }
 
 const otherCountText = (counts) => Object.entries(counts).map(([t, n]) => `${t} ${n}`).join(' · ');
@@ -167,6 +179,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                   </div>
                   {!sel.isError && <BudgetBar g={sel} />}
                   <Programs list={sel.programs} />
+                  {sel.others.length > 0 && <OtherSupports list={sel.others} />}
                   <span className="note">
                     {sel.isError ? '지원 사업 데이터를 불러오지 못했어요. 조건 문제는 아니에요.'
                       : sel.isNone ? '매칭된 지원 사업이 없어 자본금만으로 계산했어요.'
@@ -230,12 +243,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                             ))}
                           </div>
                         )}
-                        {g.others.length > 0 && (
-                          <div className="others-col">
-                            <span className="h">그 밖의 지원 <span className="sub">(예산에는 넣지 않았어요)</span></span>
-                            <OtherSupports list={g.others} />
-                          </div>
-                        )}
+                        {g.others.length > 0 && <OtherSupports list={g.others} />}
                         <div className="foot">
                           <span>자본금 + 지원금 = {formula(g)}</span>
                           <span>

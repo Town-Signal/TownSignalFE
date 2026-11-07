@@ -21,22 +21,25 @@ export function toBudgetRequest(cond) {
 const programRow = (p) => ({ id: p.program_id, name: p.name, amt: `${fmt(manwon(p.amount))}만` });
 
 // '그 밖의 지원' 유형 표시 순서. 목록에 없는 유형은 뒤에 붙인다
-const OTHER_TYPES = ['공간', '교육·멘토링', '투자·판로·네트워크', '융자', '기타'];
+const CASH_UNKNOWN = '사업화 자금(금액 미확인)';
+const OTHER_TYPES = [CASH_UNKNOWN, '공간', '교육·멘토링', '투자·판로·네트워크', '융자', '기타'];
+// 금액이 0이라 예산에 넣지 않은 현금 지원은 '현금' 대신 이 이름으로 보인다
+const typeLabel = (t) => (t === '현금' ? CASH_UNKNOWN : t);
 
 /** ② other_supports → '그 밖의 지원' 행. 순서는 서버 순서(구 전용 먼저) 그대로 */
 const otherRow = (o) => ({
   id: o.program_id,
   name: o.name,
   agency: o.agency,
-  types: o.benefit_types ?? [],
+  types: (o.benefit_types ?? []).map(typeLabel),
   seoulWide: o.district_code == null, // 서울 전체 · 전국 사업
   url: o.source_url,
 });
 
-/** 유형별 사업 수. 현금은 가용예산 쪽이라 세지 않는다(팀 결정 2026-11-07) */
+/** 유형별 사업 수 */
 function otherCounts(others) {
   const counts = {};
-  others.flatMap((o) => o.types).filter((t) => t !== '현금').forEach((t) => { counts[t] = (counts[t] ?? 0) + 1; });
+  others.flatMap((o) => o.types).forEach((t) => { counts[t] = (counts[t] ?? 0) + 1; });
   const rank = (t) => (OTHER_TYPES.includes(t) ? OTHER_TYPES.indexOf(t) : OTHER_TYPES.length);
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => rank(a) - rank(b)));
 }

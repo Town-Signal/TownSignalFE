@@ -19,9 +19,11 @@ import './Dashboard.css';
 const UNDO_MS = 4000;
 const URGENT_DAYS = 7;
 
-/** ① 공고 한 줄(표시용): D-day · 마감일 · 최대 금액(만 원) */
+/** ① 공고 한 줄(표시용): 모집 상태 · D-day · 마감일 · 최대 금액(만 원) */
 const toNotice = (p) => {
   const dday = daysUntil(p.apply_end);
+  // 옛 응답에는 status가 없고, 그때 ①은 모집 중인 공고만 보냈다
+  const closed = (p.status ?? '모집 중') === '마감';
   return {
     id: p.program_id,
     title: p.name,
@@ -29,7 +31,8 @@ const toNotice = (p) => {
     amt: `최대 ${fmt(manwon(p.amount_max))}만`,
     href: p.source_url,
     dday,
-    urgent: dday != null && dday <= URGENT_DAYS,
+    closed,
+    urgent: !closed && dday != null && dday <= URGENT_DAYS,
     deadlineTxt: p.apply_end ? `${shortDate(p.apply_end)} 마감` : '',
   };
 };
@@ -38,7 +41,7 @@ export default function Dashboard() {
   const { favs, last, setLast, addFav, removeFav, favIndustry } = useAppState();
   const handleError = useApiError();
 
-  // ① 마감임박 공고 — 서버 순서(마감일 오름차순, 상시모집 맨 뒤)
+  // ① 지원 일정 — 서버 순서(모집 중 마감 가까운 순 → 마감 최근 순)
   const [notices, setNotices] = useState({ loading: true });
   const loadNotices = useCallback(() => {
     setNotices((cur) => ({ ...cur, loading: true }));
@@ -199,8 +202,8 @@ export default function Dashboard() {
 
         <section className="dash-section" style={{ animationDelay: '.2s' }}>
           <div className="row-between">
-            <h2>청년 창업 지원 공고</h2>
-            <span className="hint">마감 임박 순</span>
+            <h2>청년 창업 지원 일정</h2>
+            <span className="hint">모집 중 먼저</span>
           </div>
           {notices.error ? (
             <div className="card">
@@ -209,15 +212,15 @@ export default function Dashboard() {
           ) : !notices.items ? (
             <div className="card fav-empty">공고를 불러오는 중…</div>
           ) : !notices.items.length ? (
-            <div className="card fav-empty">지금 모집 중인 공고가 없어요</div>
+            <div className="card fav-empty">표시할 지원 일정이 없어요</div>
           ) : (
           <ul className="card notice-list">
             {notices.items.map((n) => (
               <li key={n.id}>
                 <a href={n.href} target="_blank" rel="noopener noreferrer">
-                  {n.dday != null
-                    ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>
-                    : <span className="dday always">상시모집</span>}
+                  {n.closed ? <span className="dday closed">마감 · 매년 모집</span>
+                    : n.dday != null ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>
+                      : <span className="dday open">모집 중</span>}
                   <span className="body"><b>{n.title}</b><span>{n.org} · {n.amt}</span></span>
                   <span className="deadline">{n.deadlineTxt}</span>
                   <span className="ext" aria-hidden="true">↗</span>
