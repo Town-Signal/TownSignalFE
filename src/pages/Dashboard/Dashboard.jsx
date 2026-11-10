@@ -72,7 +72,7 @@ export default function Dashboard() {
   const industries = useIndustries();
   const ranked = last?.top ?? [];
   const first = ranked[0];
-  const firstSurv = survivalView(first); // ts-last.top → ⑤ items로 교체(생존 칸 규칙은 lib/survival)
+  const firstSurv = survivalView(first); // ts-last.top → ⑤ items로 교체(영업 유지 칸 규칙은 lib/survival)
 
   // ♡ 해제 → 토스트 + 되돌리기(원래 위치 · 업종 그대로 복구). 연속 해제 시 마지막 건만 되돌린다(10.2)
   const unfav = (code, name) => {
@@ -245,7 +245,7 @@ function FavCard({ code, fallbackName, industryCode, industries, onUnfav }) {
   const guName = x?.district_name ?? fallbackName?.district_name;
   const industryName = findIndustry(industries, industryCode)?.name;
   const noPred = x?.data_status === '예측 불가';
-  const sv = survivalView(x); // 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
+  const sv = survivalView(x); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
   const stat = (v) => (p.loading ? '…' : !x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
 
   return (

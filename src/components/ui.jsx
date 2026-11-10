@@ -22,7 +22,7 @@ export const ResidentialBadge = ({ lg }) => <span className={`badge badge-res ${
 export const GrowthLowBadge = ({ title = GROWTH_LOW_TIP }) => <span className="badge badge-warn" title={title}>신뢰도 낮음</span>;
 
 /**
- * 생존 칸 값(lib/survival의 survivalView 결과). 확률 · 점포 수 증감은 굵게, 없으면 회색 배지.
+ * 영업 유지 칸 값(lib/survival의 survivalView 결과). 확률 · 점포 수 증감은 굵게, 없으면 회색 배지.
  * 점포 수 증감은 성장세와 같은 색 · '신뢰도 낮음' 배지 · 안내 툴팁(명세 10.8)
  */
 export function SurvivalValue({ v }) {

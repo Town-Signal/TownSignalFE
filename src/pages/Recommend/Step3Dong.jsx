@@ -21,7 +21,7 @@ function Metric({ label, range, max, mid, unit, ends, small }) {
     </div>
   );
 }
-/** 생존 칸 — 3년 생존 확률(보조 1년) 또는 점포 수 증감. 확률에는 80% 범위 막대를 그리지 않는다(명세 10.8) */
+/** 영업 유지 칸 — 3년 영업 유지 확률(보조 1년) 또는 점포 수 증감. 확률에는 80% 범위 막대를 그리지 않는다(명세 10.8) */
 const SurvMetric = ({ d, small, note }) => (
   <div>
     <div className={`metric-head ${small ? 'sm' : ''}`}><span>{d.surv.label}</span><span><SurvivalValue v={d.surv} /></span></div>

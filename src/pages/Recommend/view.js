@@ -65,7 +65,7 @@ export function toGuView(budget) {
 }
 
 const FACTOR_COLORS = { sales: 'oklch(0.6 0.13 262)', survival: 'oklch(0.6 0.13 170)', growth: 'oklch(0.6 0.13 80)' };
-const FACTOR_LABELS = { sales: '매출', survival: '생존', growth: '성장세' };
+const FACTOR_LABELS = { sales: '매출', survival: '영업 유지', growth: '성장세' };
 
 const scoreColor = (score) =>
   score == null ? 'var(--muted-2)'
@@ -120,7 +120,7 @@ export function toDongView(d) {
     residential: d.is_residential,
     sampleShort: d.data_status === '표본 부족',
     sl,
-    surv: survivalView(d), // 생존 칸: 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가
+    surv: survivalView(d), // 영업 유지 칸: 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가
     salesRange: sl ? `${fmt(sl[0])}~${fmt(sl[2])}만` : '예측 불가',
     margin,
     growth: d.growth_rate,
@@ -135,7 +135,7 @@ export function toDongView(d) {
     factors: factors(d),
     // 정렬 탭용 원값(서버 값 그대로)
     sortKeys: {
-      // 생존순 = 3년 생존 확률(7.8). 점포 수 증감은 정렬에 쓰지 않는다(7.12)
+      // 영업 유지순 = 3년 영업 유지 확률(7.8). 점포 수 증감은 정렬에 쓰지 않는다(7.12)
       score, surv: d.survival_prob_3y, sales: d.sales_quarterly_p50, growth: d.growth_rate,
     },
   };
@@ -144,7 +144,7 @@ export function toDongView(d) {
 /** 정렬 탭 4종(판정 14). 받은 목록 재정렬만 — null 맨 뒤, 동률 total_score↓ → dong_code↑(7.8) */
 export const SORTS = [
   ['score', '종합점수순'],
-  ['surv', '생존순'],
+  ['surv', '영업 유지순'],
   ['sales', '매출순'],
   ['growth', '성장세순'],
 ];

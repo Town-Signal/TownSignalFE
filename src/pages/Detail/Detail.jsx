@@ -135,7 +135,7 @@ function DongDetail({ code }) {
 
         <div className="detail-grid">
           <section className="card detail-card pred">
-            <h2 className="card-title">생존 · 예상 월매출</h2>
+            <h2 className="card-title">영업 유지 · 예상 월매출</h2>
             <Prediction industryCode={industryCode} industryName={industryName} p={p} />
             <p className="disclaimer">{DISCLAIMER}</p>
           </section>
@@ -244,9 +244,9 @@ function Prediction({ industryCode, industryName, p }) {
       : <BoxMsg title="예측을 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(p.error)}`} onRetry={p.retry} />;
   }
   const x = p.data;
-  const sv = survivalView(x); // 3년 생존 확률 → 점포 수 증감 → 정보 없음(10.8)
+  const sv = survivalView(x); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음(10.8)
   const sl = range(manwon(x.sales_monthly_p10), manwon(x.sales_monthly_p50), manwon(x.sales_monthly_p90));
-  // 카드 전체를 가리는 건 예측 행이 없거나 생존 칸 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
+  // 카드 전체를 가리는 건 예측 행이 없거나 영업 유지 칸 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
   if (x.data_status === '예측 불가' || (!hasSurvival(sv) && !sl)) {
     return (
       <div className="pred-none">
@@ -258,7 +258,7 @@ function Prediction({ industryCode, industryName, p }) {
   }
   return (
     <div className="pred-metrics">
-      {/* 생존은 확률 · 증감 값이라 80% 범위 막대를 그리지 않는다 */}
+      {/* 영업 유지은 확률 · 증감 값이라 80% 범위 막대를 그리지 않는다 */}
       <div>
         <div className="metric-head"><span>{sv.label}</span><span><SurvivalValue v={sv} /></span></div>
         {sv.sub && <div className="pred-range">{sv.sub}</div>}
