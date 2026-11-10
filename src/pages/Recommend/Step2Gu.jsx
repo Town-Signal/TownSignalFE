@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
-import { fmt, manwon, requestIdText, shortDate } from '../../lib/format';
+import { daysUntil, fmt, manwon, requestIdText, shortDate } from '../../lib/format';
 import { BackIcon, ViewToggle } from '../../components/ui';
 
 const GuVectorMap = lazy(() => import('../../components/GuVectorMap'));
@@ -38,11 +38,18 @@ function ProgramDetail({ id }) {
     );
   }
   const p = state.data;
-  const period = p.always_open ? '상시모집' : `${p.apply_start ? shortDate(p.apply_start) : ''} ~ ${shortDate(p.apply_end)}`;
+  const period = p.apply_end ? `${p.apply_start ? shortDate(p.apply_start) : ''} ~ ${shortDate(p.apply_end)}` : null;
+  // ③에는 모집 상태가 없어 마감일로 본다. 마감일 당일은 모집 중
+  const closed = p.apply_end != null && daysUntil(p.apply_end) < 0;
   return (
     <div className="program-detail">
       <span>{p.agency ?? '주관기관 정보 없음'} · {p.district_name} · 최대 {fmt(manwon(p.amount_max))}만 원</span>
-      <span>접수 {period}</span>
+      {period && (
+        <span className="program-period">
+          {closed && <span className="badge badge-closed">마감 · 매년 모집</span>}
+          접수 {period}
+        </span>
+      )}
       {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer">공고 원문 보기 ↗</a>}
     </div>
   );
@@ -60,6 +67,31 @@ function Programs({ list }) {
     </div>
   ));
 }
+
+/** 그 밖의 지원 — 예산에 넣지 않은 현물 · 교육 등. Programs와 같은 .program 행에 유형 배지를 붙인다 */
+function OtherSupports({ list }) {
+  return (
+    <div className="s2-others">
+      <span className="h">그 밖의 지원 <span className="sub">(예산에는 넣지 않았어요)</span></span>
+      {list.map((o) => (
+    <div key={o.id} className="other">
+      <div className="program">
+        <span className="other-name">
+          {o.name}
+          {o.seoulWide && <span className="badge badge-gray">서울 전체 · 전국</span>}
+        </span>
+        {o.url && <a href={o.url} target="_blank" rel="noopener noreferrer">공고 ↗</a>}
+      </div>
+      {o.types.length > 0 && (
+        <div className="other-types">{o.types.map((t) => <span key={t} className="badge badge-gray">{t}</span>)}</div>
+      )}
+    </div>
+      ))}
+    </div>
+  );
+}
+
+const otherCountText = (counts) => Object.entries(counts).map(([t, n]) => `${t} ${n}`).join(' · ');
 
 const WARNING_BANNERS = {
   SUPPORT_PROGRAM_UNAVAILABLE: '지원사업 정보를 불러오지 못해 지원금 없이 계산했어요. 잠시 후 다시 계산해 보세요.',
@@ -147,6 +179,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                   </div>
                   {!sel.isError && <BudgetBar g={sel} />}
                   <Programs list={sel.programs} />
+                  {sel.others.length > 0 && <OtherSupports list={sel.others} />}
                   <span className="note">
                     {sel.isError ? '지원 사업 데이터를 불러오지 못했어요. 조건 문제는 아니에요.'
                       : sel.isNone ? '매칭된 지원 사업이 없어 자본금만으로 계산했어요.'
@@ -178,6 +211,9 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                       {!g.isError && <BudgetBar g={g} />}
                       {g.isFail && <span className="why">탈락 · {failReason(g)}</span>}
                       {g.isNone && <span className="why">매칭된 지원 사업이 없어 자본금만으로 계산했어요</span>}
+                      {g.others.length > 0 && (
+                        <span className="others"><b>다른 지원</b>{otherCountText(g.otherCounts) || `${g.others.length}건`}</span>
+                      )}
                     </button>
                     {g.isError && (
                       <div className="s2-error">
@@ -190,7 +226,11 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                         <div>
                           <span className="h ok">받을 수 있는 지원 사업</span>
                           <Programs list={g.programs} />
-                          {g.isNone && <span className="muted">현재 조건에 맞는 사업이 없어요. 나이·업종 조건을 확인해 보세요.</span>}
+                          {g.isNone && (
+                            <span className="muted">
+                              {g.others.length > 0 ? '현금 지원은 없지만 아래 다른 지원이 있어요.' : '현재 조건에 맞는 사업이 없어요. 나이·업종 조건을 확인해 보세요.'}
+                            </span>
+                          )}
                         </div>
                         {g.excluded.length > 0 && (
                           <div>
@@ -203,6 +243,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                             ))}
                           </div>
                         )}
+                        {g.others.length > 0 && <OtherSupports list={g.others} />}
                         <div className="foot">
                           <span>자본금 + 지원금 = {formula(g)}</span>
                           <span>

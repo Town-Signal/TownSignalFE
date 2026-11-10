@@ -95,21 +95,29 @@
 .fav-empty { border-radius: 18px; padding: 22px; font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .fav-empty a { font-weight: 600; }
 
-.notice-list { list-style: none; margin: 0; padding: 4px 20px; }
+.notice-card { padding: 4px 20px; }
+.notice-group + .notice-group { border-top: 1px solid var(--line-soft); }
+.notice-group-h { display: block; padding: 14px 0 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.notice-none { margin: 0; padding: 10px 0 16px; font-size: 14px; color: var(--muted); }
+.notice-more { display: block; width: 100%; height: 44px; border: none; border-top: 1px solid var(--line-soft); background: none; font-size: 13px; font-weight: 600; color: var(--primary); }
+.notice-list { list-style: none; margin: 0; padding: 0; }
 .notice-list li + li { border-top: 1px solid var(--line-soft); }
 .notice-list a { display: flex; align-items: center; gap: 14px; padding: 14px 10px; margin: 0 -10px; border-radius: 12px; color: inherit; }
-.notice-list .dday { flex: none; width: 52px; text-align: center; font-size: 13px; font-weight: 700; padding: 6px 0; border-radius: 8px; background: var(--line-soft); color: var(--ink-3); }
+.notice-list .dday { flex: none; width: 52px; text-align: center; font-size: 13px; font-weight: 700; padding: 6px 0; box-sizing: border-box; white-space: nowrap; border-radius: 8px; background: var(--line-soft); color: var(--ink-3); }
 .notice-list .dday.urgent { background: oklch(0.95 0.04 25); color: oklch(0.5 0.17 25); }
-.notice-list .dday.always { font-size: 11px; font-weight: 600; padding: 7px 0; background: oklch(0.95 0.035 170); color: oklch(0.42 0.1 170); }
+.notice-list .dday.open { font-size: 11px; font-weight: 600; padding: 7px 0; background: oklch(0.95 0.035 170); color: oklch(0.42 0.1 170); }
 .notice-list .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
 .notice-list .body b { font-size: 15px; color: var(--ink); word-break: keep-all; }
 .notice-list .deadline { flex: none; font-size: 12px; color: var(--muted-2); }
 .notice-list .ext { flex: none; font-size: 13px; color: var(--muted-2); }
+.notice-list li.closed .body, .notice-list li.closed .body b, .notice-list li.closed .deadline, .notice-list .dday.closed { color: var(--muted-2); }
+.notice-list .deadline-inline { display: none; }
 @media (hover: hover) {
   .notice-list a:hover { background: var(--bg); color: inherit; }
 }
 @media (max-width: 419.98px) {
   .notice-list .deadline { display: none; }
+  .notice-list .deadline-inline { display: inline; } /* 마감 행만 '매년 N월경'을 기관 · 금액 줄 끝에 */
 }
 
 /* 관심 카드 안 안내(업종 없음 · 불러오기 실패) */
