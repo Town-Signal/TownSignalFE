@@ -140,7 +140,7 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
         </div>
 
         <div className="s1-group">
-          <span className="label">자격증 <span>골라 주세요. 목록에 없으면 직접 추가할 수 있어요</span></span>
+          <span className="label">자격증 <span>(선택) 일부 지원사업 조건에 쓰여요. 목록에 없으면 직접 추가할 수 있어요</span></span>
           <div className="s1-tags">
             {tags.map((t) => (
               <span key={t} className={`tag ${leaving === t ? 'leaving' : ''}`}>
