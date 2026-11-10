@@ -5,7 +5,7 @@ import { useApiData } from '../../hooks/useApiData';
 import { useApiError } from '../../hooks/useApiError';
 import { findIndustry, loadMasters } from '../../lib/masters';
 import { isDongCode } from '../../lib/paths';
-import { fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, signed } from '../../lib/format';
+import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, signed } from '../../lib/format';
 import { hasSurvival, survivalView } from '../../lib/survival';
 import { MobileHeader } from '../../components/Layout';
 import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
@@ -165,8 +165,8 @@ function DongDetail({ code }) {
               {rent?.monthly_rent != null && <b className="stat-value">월 {fmt(manwon(rent.monthly_rent))}만 원</b>}
               <span className="stat-note lg">
                 {rent?.monthly_rent == null ? `${d.district_name}는 임대료 조사 자료가 없어요. 직접 확인이 필요해요.`
-                  : rent.confidence === '낮음' ? `${rent.basis}이에요. 조사된 상권이 적어 실제와 차이가 클 수 있어요.`
-                    : `이 동이 아닌 ${rent.basis}이에요 (${rent.area_sqm}㎡ 기준).`}
+                  : rent.confidence === '낮음' ? `${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준). 조사된 상권이 적어 실제와 차이가 클 수 있어요.`
+                    : `이 동이 아닌 ${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준).`}
               </span>
             </section>
           </div>

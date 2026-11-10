@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
 import { findIndustry } from '../../lib/masters';
 import { detailPath, isDongCode } from '../../lib/paths';
-import { fmt, growthText, manwon, quarterText, rateColor, requestIdText, signed } from '../../lib/format';
+import { areaText, fmt, growthText, manwon, quarterText, rateColor, requestIdText, signed } from '../../lib/format';
 import { hasSurvival, survStyle, survivalView } from '../../lib/survival';
 import { useApiError } from '../../hooks/useApiError';
 import { useDongNames } from '../../hooks/useDongNames';
@@ -35,7 +35,8 @@ const rowDefs = (hasRec) => [
     txt: `${won(d.sales_monthly_p50)}만`, sub: d.sales_monthly_range && `80% 범위 ${won(d.sales_monthly_range[0])}~${won(d.sales_monthly_range[1])}만`,
   }), (d) => d.sales_monthly_p50],
   ['성장세', '최근 1년', (d) => (d.growth_rate == null ? na('정보 없음') : { txt: growthText(d.growth_rate), color: rateColor(d.growth_rate) }), (d) => d.growth_rate],
-  ['임대료(월)', '구 평균 · 희망 면적 기준', (d) => (d.monthly_rent == null ? na('정보 없음') : {
+  // 추천을 거치지 않으면 서버가 기본 33㎡로 계산한다(insight_service.compare)
+  ['임대료(월)', hasRec ? '구 평균 · 희망 면적 기준' : `구 평균 · ${areaText()} 기준`, (d) => (d.monthly_rent == null ? na('정보 없음') : {
     txt: `월 ${won(d.monthly_rent)}만 원`, warn: d.rent_confidence === '낮음' && '신뢰도 낮음',
     sub: d.estimated_rent_cost != null && `초기 임대비용 ${won(d.estimated_rent_cost)}만 원(보증금 + 월세 3개월)`,
   }), (d) => (d.monthly_rent == null ? null : -d.monthly_rent)],

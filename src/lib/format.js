@@ -6,6 +6,13 @@ export const signed = (n) => (n >= 0 ? '+' : '−') + fmt(Math.abs(n)) + '만';
 /** 원 → 만 원(반올림). 결측은 0이 아니라 null 그대로 */
 export const manwon = (won) => (won == null ? null : Math.round(won / 10000));
 
+/** 희망 면적 기본값(㎡, 명세 7.1). 서버 DEFAULT_AREA_SQM과 같다 */
+export const DEFAULT_AREA_SQM = 33;
+/** 희망 면적 입력값 → ㎡ 숫자. 비었거나 0 이하면 기본 33㎡ */
+export const areaSqm = (v) => (Number(v) > 0 ? Number(v) : DEFAULT_AREA_SQM);
+/** 면적 표기 — '33㎡'. 평 환산은 1단계 입력 힌트에만 둔다 */
+export const areaText = (v) => `${areaSqm(v)}㎡`;
+
 /** 성장률(0.045) → '+4.5%'. 없으면 null */
 export const growthText = (rate) => {
   if (rate == null) return null;

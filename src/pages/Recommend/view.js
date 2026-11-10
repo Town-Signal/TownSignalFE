@@ -1,5 +1,5 @@
 // 추천 1 · 2 · 3단계 — API 응답을 화면 모양으로 옮긴다. 예산 · 점수 · 예측은 계산하지 않는다(명세 10.8).
-import { fmt, growthText, manwon, probText, signed } from '../../lib/format';
+import { areaSqm, fmt, growthText, manwon, probText, signed } from '../../lib/format';
 import { survivalView } from '../../lib/survival';
 
 const MANWON = 10000;
@@ -14,7 +14,7 @@ export function toBudgetRequest(cond) {
     industry_code: cond.industry_code,
     career_years: Number(cond.career) || 0,
     certificates: cond.tags,
-    target_area_sqm: Number(cond.area) || 33,
+    target_area_sqm: areaSqm(cond.area),
   };
 }
 

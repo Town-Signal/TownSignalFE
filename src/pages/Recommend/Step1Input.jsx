@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fmt } from '../../lib/format';
+import { areaText, fmt } from '../../lib/format';
 import { BoxMsg } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
 
@@ -171,7 +171,7 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
           <dl>
             <div><dt>나이</dt><dd>{age ? `${age}세` : '—'}</dd></div>
             <div><dt>자본금</dt><dd>{capital ? `${fmt(capital)}만 원` : '—'}</dd></div>
-            <div><dt>희망 면적</dt><dd>{area ? `${area}㎡` : '—'}</dd></div>
+            <div><dt>희망 면적</dt><dd>{area ? areaText(area) : '—'}</dd></div>
             <div><dt>경력</dt><dd>{career}년</dd></div>
             <div><dt>업종</dt><dd>{big && sub ? `${big} › ${sub}` : '—'}</dd></div>
             <div><dt>자격증</dt><dd>{tags.length}개</dd></div>

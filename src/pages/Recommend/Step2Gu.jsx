@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
-import { daysUntil, fmt, manwon, requestIdText, shortDate } from '../../lib/format';
+import { areaText, daysUntil, fmt, manwon, requestIdText, shortDate } from '../../lib/format';
 import { BackIcon, ViewToggle } from '../../components/ui';
 
 const GuVectorMap = lazy(() => import('../../components/GuVectorMap'));
@@ -138,7 +138,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
             <h1>25개 구 중 <em>{budgets.eligibleCount}곳</em>에서<br />임대료를 감당할 수 있어요</h1>
             <div className="dots" aria-hidden="true">{budgets.list.map((g) => <i key={g.code} className={dotClass(g)} />)}</div>
             <div className="conds">
-              {[`${age}세`, `자본금 ${fmt(capital)}만 원`, `${area}㎡`, career ? `경력 ${career}년` : '경력 없음', sub, `자격증 ${tags.length}개`].map((c) => <span key={c}>{c}</span>)}
+              {[`${age}세`, `자본금 ${fmt(capital)}만 원`, areaText(area), career ? `경력 ${career}년` : '경력 없음', sub, `자격증 ${tags.length}개`].map((c) => <span key={c}>{c}</span>)}
             </div>
             <div className="legend">
               <span><i className="cap" />자본금</span><span><i className="sub" />지원금</span><span><i className="rent" />추정 초기 임대비용</span>
@@ -247,7 +247,7 @@ export default function Step2Gu({ cond, budgets, warnings, passCount, view, setV
                         <div className="foot">
                           <span>자본금 + 지원금 = {formula(g)}</span>
                           <span>
-                            추정 초기 임대비용 {rentText(g)} (보증금 + 월세 3개월 · {parseInt(area, 10) || 33}㎡ 기준
+                            추정 초기 임대비용 {rentText(g)} (보증금 + 월세 3개월 · {areaText(area)} 기준
                             {g.monthlyRent != null && ` · 월세 ${fmt(g.monthlyRent)}만 원`}) · {g.name} 평균 기준 · 권리금 · 인테리어 · 집기 제외
                           </span>
                         </div>
