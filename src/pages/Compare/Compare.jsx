@@ -24,8 +24,8 @@ const won = (v) => fmt(manwon(v));
  */
 const rowDefs = (hasRec) => [
   ['종합점수', '0~100', (d) => (d.total_score == null ? na('예측 불가') : { txt: String(d.total_score), className: 'score' }), (d) => d.total_score],
-  // 생존 칸: 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8). '최고'는 확률끼리만(점포 수 증감엔 없음)
-  ['생존', '3년 생존 확률 · 없으면 점포 수 증감', (d) => {
+  // 영업 유지 칸: 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8). '최고'는 확률끼리만(점포 수 증감엔 없음)
+  ['영업 유지', '3년 영업 유지 확률 · 없으면 점포 수 증감', (d) => {
     const v = survivalView(d);
     if (!hasSurvival(v)) return na(v.main);
     const sub = v.kind === 'trend' ? `점포 수 증감 · ${v.sub}` : v.sub;

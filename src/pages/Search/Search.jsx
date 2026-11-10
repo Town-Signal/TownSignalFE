@@ -324,7 +324,7 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
     );
   }
   const noPred = p.data_status === '예측 불가';
-  const sv = survivalView(p); // 3년 생존 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
+  const sv = survivalView(p); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
   const sales = rangeText(fmt(manwon(p.sales_monthly_p10)), fmt(manwon(p.sales_monthly_p90)), '만');
   return (
     <div className="search-result">
