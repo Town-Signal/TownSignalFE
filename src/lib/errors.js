@@ -15,6 +15,7 @@ const COMMON = {};
 
 const ERROR_TOASTS = {
   NETWORK_ERROR: { message: '인터넷 연결을 확인해 주세요', retry: true },
+  TIMEOUT: { message: '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요', retry: true }, // 프론트 전용(api.js 10초 초과)
   DB_UNAVAILABLE: { message: '잠시 후 다시 시도해 주세요', retry: true },
   INTERNAL_ERROR: { requestId: true },
   BAD_REQUEST: COMMON,

@@ -1,25 +1,71 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
+import { useState } from 'react';
 import { hasSurvival, survStyle } from '../lib/survival';
 
 const GROWTH_LOW_TIP = '확보 분기 4개 미만 또는 2024년 상권 기준 변경으로 증감률을 믿기 어려워요';
 
+// 선 아이콘(24 viewBox, stroke=currentColor). 한 path에 하위 경로를 이어 쓴다
+export const ICONS = {
+  spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z',
+  sparkle: 'M12 2c.6 4.9 2.6 8.4 10 10-7.4 1.6-9.4 5.1-10 10-.6-4.9-2.6-8.4-10-10 7.4-1.6 9.4-5.1 10-10z',
+  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  chevronRight: 'M9 6l6 6-6 6',
+  chevronDown: 'M6 9l6 6 6-6',
+  external: 'M7 17L17 7M9 7h8v8',
+  compare: 'M8 4L4 8l4 4M4 8h12M16 20l4-4-4-4M20 16H8',
+  trend: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  chart: 'M4 20h16M7 16v-5M12 16V6M17 16v-8',
+  heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1 7.8 7.7 7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z',
+  calendar: 'M8 3v3M16 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+  pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z',
+  plus: 'M12 5v14M5 12h14',
+  arrowUp: 'M12 19V5M6 11l6-6 6 6',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+};
+
+/** 선 아이콘. filled면 안을 채운다(켜진 하트 · 장식 반짝이) */
+export function Icon({ name, size = 20, filled = false, className = '' }) {
+  return (
+    <svg
+      className={`svg-icon ${className}`} width={size} height={size} viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+/** 관심 하트. 눌러서 켤 때만 톡 튀는 애니메이션(pop) — 처음부터 켜진 하트는 조용히 그린다 */
 export function HeartButton({ on, onClick, className = '' }) {
+  const [pop, setPop] = useState(false);
   return (
     <button
       type="button"
-      className={`heart ${on ? 'on' : ''} ${className}`}
+      className={`heart ${on ? 'on' : ''} ${pop ? 'pop' : ''} ${className}`}
       aria-pressed={on}
       aria-label={on ? '관심 등록됨' : '관심 등록'}
       title={on ? '관심 등록됨' : '관심 등록'}
-      onClick={onClick}
+      onClick={(e) => { if (!on) setPop(true); onClick?.(e); }}
+      onAnimationEnd={() => setPop(false)}
     >
-      {on ? '♥' : '♡'}
+      <Icon name="heart" filled={on} />
     </button>
   );
 }
 
 export const ResidentialBadge = ({ lg }) => <span className={`badge badge-res ${lg ? 'lg' : ''}`}>주거지역</span>;
 export const GrowthLowBadge = ({ title = GROWTH_LOW_TIP }) => <span className="badge badge-warn" title={title}>신뢰도 낮음</span>;
+/**
+ * '신뢰도 낮음' 작은 점 — 좁은 칸에서 배지 대신 항목 이름 옆에 붙인다. 마우스를 올리면 이유가 보인다.
+ * 옆에 '신뢰도 낮음' 글자를 함께 쓰면 decorative로 화면 읽기에서 뺀다
+ */
+export const LowDot = ({ title = GROWTH_LOW_TIP, decorative = false }) => (
+  decorative
+    ? <i className="low-dot" title={title} aria-hidden="true" />
+    : <i className="low-dot" title={title} role="img" aria-label="신뢰도 낮음" />
+);
 
 /**
  * 영업 유지 칸 값(lib/survival의 survivalView 결과). 확률 · 점포 수 증감은 굵게, 없으면 회색 배지.
@@ -35,8 +81,8 @@ export function SurvivalValue({ v }) {
   );
 }
 
-/** 80% 확률 범위 막대: 하한~상한 bar + 중앙값 눈금. ends를 주면 아래에 하한/상한 라벨을 단다 */
-export function RangeBar({ range: [lo, mid, hi], max, ends }) {
+/** 80% 확률 범위 막대: 하한~상한 bar + 중앙값 눈금. ends를 주면 아래에 하한/상한 라벨, legend면 그 아래에 범례(구간 · 눈금)를 단다 */
+export function RangeBar({ range: [lo, mid, hi], max, ends, legend = false }) {
   const pct = (v) => `${(v / max) * 100}%`;
   return (
     <>
@@ -50,6 +96,12 @@ export function RangeBar({ range: [lo, mid, hi], max, ends }) {
           <span style={{ flexBasis: pct(lo) }}>{ends[0]}</span>
           <i style={{ flexBasis: pct(hi - lo) }} />
           <span>{ends[1]}</span>
+        </div>
+      )}
+      {legend && (
+        <div className="range-legend">
+          <span><i className="lg-range" />80% 확률 범위</span>
+          <span><i className="lg-mid" />예상값</span>
         </div>
       )}
     </>
@@ -79,10 +131,11 @@ export const BackIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
 );
 
-export function Toast({ message, kind, actionLabel, onAction }) {
+/** 하단 토스트. leaving이면 아래로 내려가며 사라지는 중(usePresence와 함께 쓴다) */
+export function Toast({ message, kind, actionLabel, onAction, leaving = false }) {
   const isError = kind === 'error';
   return (
-    <div className={`toast ${isError ? 'error' : ''}`} role={isError ? 'alert' : 'status'}>
+    <div className={`toast ${isError ? 'error' : ''} ${leaving ? 'leaving' : ''}`} role={isError ? 'alert' : 'status'}>
       <div>
         {isError && <i aria-hidden="true">!</i>}
         <span>{message}</span>

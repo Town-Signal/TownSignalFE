@@ -22,4 +22,11 @@
 .pin-mk .rank { min-width: 22px; height: 22px; padding: 0 5px; border-radius: 7px; background: #fff; border: 2px solid var(--primary); color: var(--primary); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .pin-mk .nm { padding: 3px 9px; border-radius: 7px; font-size: 12.5px; font-weight: 700; }
 .pin-mk .sc { padding: 2px 9px; border-radius: 7px; background: #fff; color: var(--primary); font-size: 11.5px; font-weight: 700; box-shadow: 0 1px 3px oklch(0.3 0.03 262 / 0.25); }
-.pin-mk .dot { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 1.5px solid oklch(0.47 0.17 262 / 0.6); color: var(--primary); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); }
+/* 등장: 핀이 동 중심(밀려난 라벨은 지시선을 따라)에서 작게 시작해 톡 튀어나온다 — .pin-mk의 transform(위치 · 크기)은 그대로 두고
+   scale 속성만 움직인다(원점이 동 중심). 지시선은 서서히. 고른 핀은 날아간 뒤 한 번 톡(pop) */
+@keyframes pin-in { from { opacity: 0; scale: .3; } }
+@keyframes pin-pop { 40% { scale: 1.18; } }
+.pin-w.enter > .pin-mk { animation: pin-in .45s cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms) both; }
+.pin-w.enter > :is(.pin-ld, .pin-ldot) { animation: fade-in .3s ease var(--d, 0ms) both; }
+.pin-mk.pop { animation: pin-pop .5s var(--ease-out); }
+.pin-mk .dot { position: absolute; min-width: 24px; height: 24px; padding: 0 4px; border-radius: 999px; background: #fff; border: 1.5px solid oklch(0.47 0.17 262 / 0.6); color: var(--primary); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); }

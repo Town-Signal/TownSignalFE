@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Toast } from '../components/ui';
+import { usePresence } from '../hooks/usePresence';
 import { errorToast } from '../lib/errors';
 
 const ToastContext = createContext(null);
@@ -27,14 +28,15 @@ export function ToastProvider({ children }) {
   }, [show]);
 
   const value = useMemo(() => ({ show, error, hide }), [show, error, hide]);
+  const [shown, leaving] = usePresence(toast); // 닫힌 뒤에도 내려가는 동안 그린다
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {toast && (
+      {shown && (
         <Toast
-          key={toast.id} message={toast.message} kind={toast.kind} actionLabel={toast.actionLabel}
-          onAction={() => { hide(); toast.onAction?.(); }}
+          key={shown.id} message={shown.message} kind={shown.kind} actionLabel={shown.actionLabel} leaving={leaving}
+          onAction={() => { if (leaving) return; hide(); shown.onAction?.(); }}
         />
       )}
     </ToastContext.Provider>

@@ -23,6 +23,9 @@ export const growthText = (rate) => {
 /** 증감률 색 — 상승 초록 · 하락 빨강, 없으면 흐리게(성장세 · 점포 수 증감 공통) */
 export const rateColor = (rate) => (rate == null ? 'var(--muted)' : rate >= 0 ? 'var(--green)' : 'var(--down)');
 
+/** 종합점수 → 소수 첫째 자리까지(82 → '82.0', 82.37 → '82.4'). 없으면 '—'. 표기만 바꾸고 판정 · 정렬에는 원래 숫자를 쓴다 */
+export const scoreText = (s) => (s == null ? '—' : Number(s).toFixed(1));
+
 /** 영업 유지 확률(0.793) → '79%'. 없으면 null */
 export const probText = (p) => (p == null ? null : `${Math.round(p * 100)}%`);
 

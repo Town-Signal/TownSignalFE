@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './maps.css';
-import { loadDongGeo, loadGuGeo } from '../lib/geo';
+import { loadDongCenters, loadDongGeo, loadGuGeo } from '../lib/geo';
 import { errorKind } from '../lib/errors';
+import { REDUCED_MOTION } from '../hooks/useMediaQuery';
 import { relaxPins } from './pinLayout';
 import { MapMsg } from './ui';
 
@@ -12,6 +13,26 @@ const DEEP = 'oklch(0.32 0.12 262)';
 const isDesktop = () => window.innerWidth >= 900;
 // 모바일은 하단 시트가 지도 아래쪽을 가리므로 그만큼 비워 두고 맞춘다
 const bottomPad = () => (isDesktop() ? 0 : Math.round(window.innerHeight * 0.28));
+const reduceMotion = () => window.matchMedia(REDUCED_MOTION).matches;
+/** 레이어 · pane이 서서히 나타나게(Web Animations — CSS 규칙이 닿지 않아 동작 줄이기를 직접 확인) */
+const fadeIn = (el, delay = 0) => { if (el && !reduceMotion()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay, easing: 'ease-out', fill: 'backwards' }); };
+
+/**
+ * 지도가 움직인 뒤(moveend) 핀을 다시 그린다. enter면 움직이는 동안 핀을 숨겼다가 멈추면 차례로 나타나게, pop이면 그 핀만 한 번 톡.
+ * fit · fly를 부르기 전에 걸어야 한다(움직임이 없으면 moveend가 그 자리에서 바로 오기도 한다). moveend가 안 와도 0.9초 뒤 그린다
+ */
+function afterMove(c, opts) {
+  c.hidePins = !!opts.enter;
+  const done = () => {
+    if (c.moveDone !== done) return;
+    c.moveDone = null;
+    c.hidePins = false;
+    renderPins(c, opts);
+  };
+  c.moveDone = done;
+  c.map.once('moveend', done);
+  setTimeout(done, 900);
+}
 
 /**
  * 실제 지도(OSM 타일) 위에 구/동 경계와 순위 핀을 올린다 (직접찾기 · 추천 3단계).
@@ -62,16 +83,17 @@ export default function DongLeafletMap({ passGus = NO_PASS, selGu, pins, fills, 
   useEffect(() => {
     const c = ctx.current;
     let alive = true;
-    Promise.all([loadGuGeo(), loadDongGeo()]).then(([gu, dong]) => {
+    Promise.all([loadGuGeo(), loadDongGeo(), loadDongCenters()]).then(([gu, dong, centers]) => {
       if (!alive) return;
       c.gu = gu;
       c.dong = dong;
-      dong?.features.forEach((f) => { c.dongCenter[String(f.properties.code)] = L.geoJSON(f).getBounds().getCenter(); });
+      // 중심점은 lib/geo에서 한 번만 계산해 둔 것을 쓴다(동마다 Leaflet 레이어를 만들어 구하지 않는다)
+      c.dongCenter = Object.fromEntries(Object.entries(centers).map(([k, [x, y]]) => [k, L.latLng(y, x)]));
       c.guLayer = L.geoJSON(gu, {
         pane: 'guPane',
         onEachFeature: (f, layer) => {
           layer.on('click', () => handlers.current.onPickGu?.(String(f.properties.code)));
-          layer.bindTooltip(f.properties.name, { permanent: true, direction: 'center', className: 'gu-label' });
+          layer.bindTooltip(esc(f.properties.name), { permanent: true, direction: 'center', className: 'gu-label' });
         },
       }).addTo(c.map);
       setStatus('ready');
@@ -101,6 +123,7 @@ function drawFills(c, fills) {
   c.lastFills = fills;
   if (c.fillLayer) { c.map.removeLayer(c.fillLayer); c.fillLayer = null; }
   if (!fills || !c.dong) return;
+  fadeIn(c.map.getPane('fillPane')); // 업종이 바뀌면 색이 서서히 바뀌어 나타난다
   c.fillLayer = L.geoJSON(c.dong, {
     pane: 'fillPane',
     style: (f) => {
@@ -110,7 +133,7 @@ function drawFills(c, fills) {
     onEachFeature: (f, layer) => {
       const v = fills[codeOf(f)];
       if (v?.key) layer.on('click', () => c.handlers.current.onPickDong?.(v.key));
-      layer.bindTooltip(v?.tip ?? f.properties.name, { sticky: true, className: 'dong-tip' });
+      layer.bindTooltip(esc(v?.tip ?? f.properties.name), { sticky: true, className: 'dong-tip' });
     },
   }).addTo(c.map);
 }
@@ -161,14 +184,20 @@ function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
   const selPin = pins.find((p) => p.sel);
   const pinBounds = () => L.latLngBounds(pins.map((p) => p.ll)).pad(0.15);
 
-  // 핀 구성이 바뀌면 화면을 다시 맞춘다 (처음엔 서울 전체, 이후엔 핀 범위)
+  // 핀 구성이 바뀌면 화면을 다시 맞추고(처음엔 서울 전체, 이후엔 핀 범위) 새 핀이 차례로 나타난다
+  let enter = false;
   const key = pins.map((p) => p.key).sort().join(',');
   if (key !== c.fitKey) {
     if (pins.length && !selPin) {
       map.invalidateSize();
-      if (!c.fitKey) map.fitBounds(c.guLayer.getBounds(), { paddingTopLeft: [left + 8, 8], paddingBottomRight: [8, 8], animate: false });
-      else map.fitBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad()], maxZoom: 13 });
-    }
+      if (!c.fitKey) {
+        map.fitBounds(c.guLayer.getBounds(), { paddingTopLeft: [left + 8, 8], paddingBottomRight: [8, 8], animate: false });
+        enter = true; // 움직임 없이 바로 맞추므로 이번에 그리면서 나타나게
+      } else {
+        afterMove(c, { enter: true }); // 이동하는 동안 숨겼다가 멈추면 나타나게
+        map.fitBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad()], maxZoom: 13 });
+      }
+    } else enter = pins.length > 0; // 동을 고른 채 업종을 바꾼 경우 — 이동 없이 그 자리에서
     c.fitKey = key;
   }
 
@@ -179,22 +208,31 @@ function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
     if (selPin) {
       const feature = c.dong?.features.find((f) => codeOf(f) === selPin.geo);
       const bounds = feature ? L.geoJSON(feature).getBounds() : L.latLngBounds([selPin.ll, selPin.ll]);
+      afterMove(c, { pop: selPin.key }); // 날아간 뒤 고른 핀이 한 번 톡
       map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad() + 60], maxZoom: 15, duration: 0.45, easeLinearity: 0.5 });
-      if (feature) c.focusLayer = L.geoJSON(feature, { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 2.5, fillColor: PRI, fillOpacity: 0.12 } }).addTo(map);
+      if (feature) {
+        c.focusLayer = L.geoJSON(feature, { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 2.5, fillColor: PRI, fillOpacity: 0.12 } }).addTo(map);
+        c.focusLayer.eachLayer((l) => fadeIn(l.getElement(), 300)); // 날아가는 동안 기다렸다가 경계가 서서히
+      }
     } else if (pins.length) {
       map.flyToBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad()], maxZoom: 13, duration: 0.4, easeLinearity: 0.5 });
     }
     c.lastSel = selKey;
   }
 
-  renderPins(c);
+  renderPins(c, { enter });
 }
 
+// 핀 · 툴팁은 문자열 HTML로 그리므로 API에서 온 글자(동 이름 · 점수 · 툴팁)는 꼭 이스케이프한다(데이터에 태그가 섞여도 실행되지 않게)
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+
 function pinHtml(p) {
+  const name = esc(p.name);
+  const score = esc(p.score);
   if (!p.top) {
     return p.sel
-      ? `<div class="dot" style="width:32px;height:32px;background:${PRI};color:#fff;border-color:${PRI};font-size:11px">${p.score}</div><div class="in" style="top:-30px"><div class="nm" style="background:${DEEP};color:#fff">${p.name}</div></div>`
-      : `<div class="dot">${p.score}</div>`;
+      ? `<div class="dot" style="width:32px;height:32px;background:${PRI};color:#fff;border-color:${PRI};font-size:11px">${score}</div><div class="in" style="top:-30px"><div class="nm" style="background:${DEEP};color:#fff">${name}</div></div>`
+      : `<div class="dot">${score}</div>`;
   }
   const alpha = p.sel ? 0.3 : (0.06 + p.t * 0.22).toFixed(3);
   const filled = p.sel || p.podium;
@@ -205,15 +243,16 @@ function pinHtml(p) {
   if (p.collapsed) return `${halo}<div class="in"><div class="rank" style="background:${PRI};color:#fff">${p.rank}</div></div>`;
   return `${halo}<div class="in">` +
     `<div class="rank" style="${p.rank === 1 ? 'min-width:30px;height:26px;font-size:15px;' : ''}background:${filled ? (p.sel ? DEEP : PRI) : '#fff'};color:${filled ? '#fff' : PRI}">${p.rank}</div>` +
-    `<div class="nm" style="background:${p.sel ? DEEP : light ? '#fff' : PRI};color:${light ? PRI : '#fff'};${light ? 'box-shadow:0 1px 3px oklch(0.3 0.03 262 / 0.25);border:1px solid oklch(0.47 0.17 262 / 0.45)' : ''}">${p.name}</div>` +
-    `<div class="sc">${p.score}${p.score === '—' ? '' : '점'}</div></div>`;
+    `<div class="nm" style="background:${p.sel ? DEEP : light ? '#fff' : PRI};color:${light ? PRI : '#fff'};${light ? 'box-shadow:0 1px 3px oklch(0.3 0.03 262 / 0.25);border:1px solid oklch(0.47 0.17 262 / 0.45)' : ''}">${name}</div>` +
+    `<div class="sc">${score}${p.score === '—' ? '' : '점'}</div></div>`;
 }
 
-// 핀은 수가 적고 줌/이동마다 통째로 다시 배치해야 해서 Leaflet 마커 대신 pane에 직접 그린다
-function renderPins(c) {
+// 핀은 수가 적고 줌/이동마다 통째로 다시 배치해야 해서 Leaflet 마커 대신 pane에 직접 그린다.
+// 그래서 등장 애니메이션은 enter · pop을 받은 그 한 번만 붙인다(끌거나 확대할 때마다 다시 재생되지 않게)
+function renderPins(c, { enter = false, pop = null } = {}) {
   const { map, pinPane, pins } = c;
   pinPane.replaceChildren();
-  if (!pins.length) return;
+  if (!pins.length || c.hidePins) return;
   const k = window.innerWidth < 480 ? 0.82 : 1;
   pins.forEach((p) => {
     const pt = map.latLngToLayerPoint(p.ll);
@@ -225,7 +264,9 @@ function renderPins(c) {
   const frag = document.createDocumentFragment();
   pins.forEach((p) => {
     const wrap = document.createElement('div');
-    wrap.className = 'pin-w';
+    wrap.className = `pin-w ${enter ? 'enter' : ''}`;
+    // 1위부터 차례로(45ms 간격), 순위 밖 점은 그 뒤에 한꺼번에
+    if (enter) wrap.style.setProperty('--d', `${p.top ? (p.rank - 1) * 45 : 480}ms`);
     wrap.style.transform = `translate(${p.ox}px,${p.oy}px)`;
     const dx = p.x - p.ox, dy = p.y - p.oy, dist = Math.hypot(dx, dy);
     // 라벨이 원래 위치에서 밀려났으면 지시선으로 잇는다
@@ -233,7 +274,7 @@ function renderPins(c) {
       wrap.insertAdjacentHTML('beforeend', `<div class="pin-ld" style="width:${dist}px;transform:rotate(${Math.atan2(dy, dx)}rad)"></div><div class="pin-ldot"></div>`);
     }
     const marker = document.createElement('div');
-    marker.className = 'pin-mk';
+    marker.className = `pin-mk ${pop === p.key ? 'pop' : ''}`;
     marker.style.transform = `translate(${dx}px,${dy}px) scale(${k})`;
     marker.title = `${p.name} · ${p.gu} · ${p.score}점`;
     marker.innerHTML = pinHtml(p);

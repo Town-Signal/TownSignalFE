@@ -25,7 +25,7 @@ export function survivalView(x) {
   if (t?.change_rate != null) {
     const main = growthText(t.change_rate);
     return {
-      kind: 'trend', label: '점포 수 증감', main, sub: `최근 1년 · 최근 분기 ${fmt(t.latest_count)}곳`,
+      kind: 'trend', label: '점포 수 증감', main, sub: `최근 1년\u00a0· 최근\u00a0분기\u00a0${fmt(t.latest_count)}곳`, // 줄은 '·' 뒤에서만 바뀌게(안 띄는 공백) — '·'로 시작하는 줄 · '최근 분기 N곳'이 나뉘는 걸 막는다
       shortLabel: '점포 수', short: main, rate: t.change_rate, low: t.confidence === '낮음', note: TREND_NOTE,
     };
   }
