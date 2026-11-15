@@ -1,5 +1,7 @@
 /* 대시보드처럼 다른 화면(1160px)보다 넓게 쓴다 */
 .page.rec { max-width: 1440px; gap: clamp(20px, 2.4%, 28px); padding-top: clamp(12px, 2.4%, 32px); }
+/* 데스크톱은 1 · 2 · 3단계 모두 같은 위 여백 · 간격(2 · 3단계 화면 맞춤 값) — 단계를 오갈 때 단계 표시가 제자리에 있게 */
+@media (min-width: 900px) { .page.rec { padding-top: 16px; gap: 20px; } }
 /* 모바일: 탭바 위에 고정된 다음 단계 바만큼 아래 여백을 더 준다 */
 @media (max-width: 899.98px) {
   .rec.has-cta { padding-bottom: calc(var(--tab-h) + var(--safe-b) + 106px); }
@@ -126,8 +128,8 @@
 .rec-cta .cta-lbl { animation: fade-in .2s ease; }
 
 /* ───── 1단계 ───── */
-/* 카드 하나: 머리 아래 네 칸(.s1-grid) — 넓으면(1040px~) 기본 정보 | 희망 업종 / 자격증 | 안내 + 계산 버튼,
-   좁으면 같은 순서로 위아래로 쌓는다. 칸 사이는 구분선 */
+/* 카드 하나: 머리 아래 세 묶음(.s1-grid) — 넓으면(1040px~) 왼쪽 기본 정보 / 자격증 | 오른쪽 희망 업종,
+   좁으면 같은 순서로 위아래로 쌓는다. 칸 사이는 구분선. 계산 버튼은 하단 바 */
 .s1-form { min-width: 0; padding: clamp(20px, 3%, 40px); display: flex; flex-direction: column; gap: 24px; }
 /* 들어올 때 머리 → 네 칸이 차례로 페이드업(대시보드 히어로와 같은 70ms 간격) */
 .s1-form > .page-head, .s1-grid > * { animation: fade-up .5s var(--ease-out) backwards; }
@@ -235,24 +237,16 @@
   .s1-tags input { font-size: 15px; }
   .s1-status { font-size: 15px; }
 }
-/* 1040~1359px: 기본 정보 | 희망 업종, 그 아래 자격증(두 칸 폭). 기본 정보 칸은 나이 · 경력 / 자본금 · 면적.
-   희망 업종(칩 · 세부 업종 상자)이 기본 정보(짧은 숫자 칸)보다 자리가 더 필요해 조금 넓게 */
+/* 1040px~: 왼쪽 열 위 기본 정보(나이 · 경력 / 자본금 · 면적) · 아래 자격증 | 오른쪽 열 희망 업종(두 행 높이). 사이는 구분선.
+   업종이 100개라 세부 업종 칩이 많아(소매업 31개) 오른쪽을 넓게. 왼쪽은 경력 −/+가 들어갈 380px 아래로 줄지 않는다 */
 @media (min-width: 1040px) {
-  .s1-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 0; }
+  .s1-grid { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(0, 1.8fr); grid-template-rows: auto 1fr; gap: 0; }
   .s1-grid > * + * { border-top: none; padding-top: 0; }
-  .s1-grid > .s1-basic { padding-right: 40px; border-right: 1px solid var(--line-soft); }
-  .s1-grid > .s1-ind { padding-left: 40px; }
-  .s1-grid > :is(.s1-basic, .s1-ind) { padding-bottom: 28px; }
-  .s1-grid > .s1-cert { grid-column: 1 / -1; border-top: 1px solid var(--line-soft); padding-top: 28px; }
+  .s1-grid > :is(.s1-basic, .s1-cert) { grid-column: 1; padding-right: 40px; }
+  .s1-grid > .s1-basic { padding-bottom: 28px; }
+  .s1-grid > .s1-cert { border-top: 1px solid var(--line-soft); padding-top: 28px; }
+  .s1-grid > .s1-ind { grid-column: 2; grid-row: 1 / 3; padding-left: 40px; border-left: 1px solid var(--line-soft); }
   .s1-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-/* 1360px~: 기본 정보 | 희망 업종 | 자격증 3단(사이에 세로 구분선), 1 : 1.2 : 1.
-   이보다 좁으면 기본 정보 칸(특히 경력 −/+)이 모자라 위의 두 칸 배치를 쓴다 */
-@media (min-width: 1360px) {
-  .s1-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); }
-  .s1-grid > .s1-ind { padding-right: 40px; border-right: 1px solid var(--line-soft); }
-  .s1-grid > :is(.s1-basic, .s1-ind) { padding-bottom: 0; }
-  .s1-grid > .s1-cert { grid-column: auto; border-top: none; padding-top: 0; padding-left: 40px; }
 }
 @media (min-width: 900px) and (hover: hover) {
   .s1-input.stepper button:hover { background: var(--bg); }
@@ -448,7 +442,7 @@
    아주 낮은 화면은 640px 아래로 줄이지 않는다(그때만 페이지가 조금 스크롤) */
 @media (min-width: 1040px) {
   body:has(.page.rec.is-s2) .site-footer { display: none; }
-  .app .page.rec.is-s2 { flex: none; height: max(640px, calc(100dvh - var(--header-h))); min-height: 0; padding-top: 16px; padding-bottom: 96px; gap: 20px; }
+  .app .page.rec.is-s2 { flex: none; height: max(640px, calc(100dvh - var(--header-h))); min-height: 0; padding-bottom: 96px; }
   .is-s2 .rec-step { flex: 1; min-height: 0; }
   .is-s2 .s2-body.wide { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
   .is-s2 .s2-main { min-height: 0; }
@@ -475,7 +469,7 @@
   body:has(.page.rec.is-s3) .site-footer { display: none; }
   /* .page는 .app 안에서 flex: 1(늘어나는 칸)이라 height를 무시하고 내용만큼 커진다 → flex: none + min-height: 0으로 높이를 고정해야
      안쪽(동 목록 패널)이 넘쳐서 스크롤된다 */
-  .app .page.rec.is-s3 { flex: none; height: max(640px, calc(100dvh - var(--header-h))); min-height: 0; padding-top: 16px; padding-bottom: 96px; gap: 20px; }
+  .app .page.rec.is-s3 { flex: none; height: max(640px, calc(100dvh - var(--header-h))); min-height: 0; padding-bottom: 96px; }
   .is-s3 :is(.rec-step, .s3) { flex: 1; min-height: 0; }
   /* 한 줄 머리: 제목 | 정렬 칩(자리가 모자라면 가로 스크롤) | 보기 전환, 그 아래 본문이 남은 높이를 다 쓴다 */
   .is-s3 .s3 { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); gap: 16px 20px; align-items: center; }
@@ -665,6 +659,7 @@
 .program-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
 .program-link[aria-expanded="true"] { color: var(--primary); text-decoration-color: currentColor; }
 .program-detail { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; padding: 10px 12px; border-radius: 10px; background: oklch(0.97 0.005 262); font-size: 13px; line-height: 1.5; transform-origin: top; animation: reveal .25s var(--ease) both; }
+.program-detail.fade-in { animation: fade-in .3s ease both; } /* 막대 상자에서 내용이 오면 다시 펼치지 않고 페이드만 */
 .program-detail a { align-self: flex-start; color: var(--primary); font-weight: 600; transition: color .2s, transform .3s var(--ease-out); }
 .program-period { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .badge-closed { background: var(--line-soft); color: var(--ink-3); }

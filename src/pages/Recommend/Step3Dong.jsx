@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { fmt, rateColor, signed } from '../../lib/format';
 import { DESKTOP, useMediaQuery } from '../../hooks/useMediaQuery';
-import { GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, SurvivalValue, ViewToggle } from '../../components/ui';
+import { GrowthLowBadge, HeartButton, Icon, MapMsg, RangeBar, ResidentialBadge, SurvivalValue, ViewToggle } from '../../components/ui';
 import { SORTS } from './view';
 
 const DongLeafletMap = lazy(() => import('../../components/DongLeafletMap'));
@@ -145,7 +145,7 @@ export default function Step3Dong({ sub, industryCode, budgets, sorted, sel, sor
       {view === 'map' ? (
         <div className="s3-map-grid">
           <div className="card s3-map">
-            <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
+            <Suspense fallback={<MapMsg />}>
               <DongLeafletMap passGus={budgets.passGeos} selGu={sel.geo?.slice(0, 5)} pins={pins} onPickDong={select} />
             </Suspense>
           </div>

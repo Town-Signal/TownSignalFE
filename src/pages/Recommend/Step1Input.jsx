@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../../lib/format';
-import { BoxMsg } from '../../components/ui';
+import { BoxMsg, Sk } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
 
 const digits = (v, max) => v.replace(/\D/g, '').slice(0, max);
@@ -142,6 +142,34 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
           </div>
         </section>
 
+        <section className="s1-sec s1-group s1-cert">
+          <h2 className="s1-sec-title">자격증 <span className="opt">선택</span></h2>
+          <span className="hint">일부 지원사업 조건에 쓰여요. 목록에 없으면 직접 추가할 수 있어요</span>
+          <div className="s1-tagbox">
+            <div className="s1-tags">
+              {tags.map((t) => (
+                <span key={t} className={`tag ${leaving === t ? 'leaving' : ''}`}>
+                  {t}<button type="button" aria-label={`${t} 삭제`} onClick={() => removeTag(t)}>×</button>
+                </span>
+              ))}
+              <input
+                value={query} placeholder="자격증 검색" aria-label="자격증 검색" enterKeyHint="done"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && q) { e.preventDefault(); addTag(suggestions[0] || q); } }}
+              />
+            </div>
+            {q && (
+              <div className="s1-sugs">
+                {suggestions.map((c, i) => (
+                  <button key={c} type="button" style={{ animationDelay: `${i * 25}ms` }} onClick={() => addTag(c)}>{c}</button>
+                ))}
+                <button type="button" className="custom" style={{ animationDelay: `${suggestions.length * 25}ms` }} onClick={() => addTag(q)}>+ ‘{q}’ 직접 추가</button>
+              </div>
+            )}
+          </div>
+          {errors.tags && <span className="s1-group-error" role="alert">{errors.tags}</span>}
+        </section>
+
         <section className="s1-sec s1-group s1-ind">
           <h2 className="s1-sec-title">
             희망 업종
@@ -150,10 +178,10 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
           {!cats ? (
             mastersError
               ? <BoxMsg title="업종 목록을 불러오지 못했어요" desc="조건 문제는 아니에요." onRetry={onRetryMasters} />
-              : <span className="hint">업종 목록을 불러오는 중…</span>
+              : <div className="s1-chips" aria-busy="true"><span className="sr-only" role="status">업종 목록을 불러오는 중…</span>{[0, 1, 2].map((i) => <Sk key={i} w={84} h={44} r={22} />)}</div>
           ) : (
             <>
-              <div className="s1-chips">
+              <div className="s1-chips fade-in">
                 {Object.keys(cats).map((k) => (
                   <button
                     key={k} type="button" className={`chip ${big === k ? 'on' : ''}`} aria-pressed={big === k}
@@ -201,34 +229,6 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
             </>
           )}
           {errors.sub && <span className="s1-group-error" role="alert">{errors.sub}</span>}
-        </section>
-
-        <section className="s1-sec s1-group s1-cert">
-          <h2 className="s1-sec-title">자격증 <span className="opt">선택</span></h2>
-          <span className="hint">일부 지원사업 조건에 쓰여요. 목록에 없으면 직접 추가할 수 있어요</span>
-          <div className="s1-tagbox">
-            <div className="s1-tags">
-              {tags.map((t) => (
-                <span key={t} className={`tag ${leaving === t ? 'leaving' : ''}`}>
-                  {t}<button type="button" aria-label={`${t} 삭제`} onClick={() => removeTag(t)}>×</button>
-                </span>
-              ))}
-              <input
-                value={query} placeholder="자격증 검색" aria-label="자격증 검색" enterKeyHint="done"
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && q) { e.preventDefault(); addTag(suggestions[0] || q); } }}
-              />
-            </div>
-            {q && (
-              <div className="s1-sugs">
-                {suggestions.map((c, i) => (
-                  <button key={c} type="button" style={{ animationDelay: `${i * 25}ms` }} onClick={() => addTag(c)}>{c}</button>
-                ))}
-                <button type="button" className="custom" style={{ animationDelay: `${suggestions.length * 25}ms` }} onClick={() => addTag(q)}>+ ‘{q}’ 직접 추가</button>
-              </div>
-            )}
-          </div>
-          {errors.tags && <span className="s1-group-error" role="alert">{errors.tags}</span>}
         </section>
 
         {/* 모바일: 빈 칸 안내를 카드 맨 아래에도(데스크톱은 하단 바에만) */}

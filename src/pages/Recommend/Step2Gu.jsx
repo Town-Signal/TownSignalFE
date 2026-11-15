@@ -4,7 +4,7 @@ import { toApiError } from '../../lib/errors';
 import { useMore, usePeekOnce } from '../../hooks/useScrollHint';
 import { areaText, daysUntil, fmt, manwon, requestIdText, shortDate } from '../../lib/format';
 import { useMediaQuery, WIDE } from '../../hooks/useMediaQuery';
-import { Icon, ViewToggle } from '../../components/ui';
+import { Icon, MapMsg, Sk, ViewToggle } from '../../components/ui';
 import { condChips } from './view';
 
 const GuVectorMap = lazy(() => import('../../components/GuVectorMap'));
@@ -61,7 +61,9 @@ function ProgramDetail({ id }) {
     return () => { alive = false; };
   }, [id]);
 
-  if (state.loading) return <div className="program-detail muted">공고를 불러오는 중…</div>;
+  if (state.loading) {
+    return <div key="sk" className="program-detail" aria-busy="true"><span className="sr-only" role="status">공고를 불러오는 중…</span><Sk w="70%" /><Sk w="90%" /><Sk w="45%" /></div>;
+  }
   if (state.error) {
     return (
       <div className="program-detail muted" role="alert">
@@ -74,7 +76,7 @@ function ProgramDetail({ id }) {
   // ③에는 모집 상태가 없어 마감일로 본다. 마감일 당일은 모집 중
   const closed = p.apply_end != null && daysUntil(p.apply_end) < 0;
   return (
-    <div className="program-detail">
+    <div key="v" className="program-detail fade-in">
       <span>{p.agency ?? '주관기관 정보 없음'} · {p.district_name} · 최대 {fmt(manwon(p.amount_max))}만 원</span>
       {period && (
         <span className="program-period">
@@ -269,7 +271,7 @@ export default function Step2Gu({ cond, budgets, warnings, view, setView, onReca
           {view === 'map' ? (
             <>
               <div className="card s2-map">
-                <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
+                <Suspense fallback={<MapMsg />}>
                   <GuVectorMap gus={mapGus} selGu={(wide ? panelGu : sel)?.geo} onPick={pickGeo} />
                 </Suspense>
                 <div className="s2-map-legend">

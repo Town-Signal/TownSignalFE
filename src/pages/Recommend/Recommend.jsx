@@ -14,6 +14,7 @@ import { BackIcon, BoxMsg, Icon } from '../../components/ui';
 import Step1Input from './Step1Input';
 import Step2Gu from './Step2Gu';
 import Step3Dong from './Step3Dong';
+import RestoreSkeleton from './RestoreSkeleton';
 import { condChips, sortDongs, toBudgetRequest, toDongView, toGuView, toLast } from './view';
 import './Recommend.css';
 
@@ -298,7 +299,7 @@ export default function Recommend() {
               />
             </div>
           ) : (
-            <div className="card rec-restoring" role="status">최근 추천 결과를 불러오는 중…</div>
+            <><span className="sr-only" role="status">최근 추천 결과를 불러오는 중…</span><RestoreSkeleton step={step} /></>
           ))}
           {step === 1 && (
             <Step1Input
