@@ -12,7 +12,7 @@ import { useApiData } from '../../hooks/useApiData';
 import { DESKTOP, useMediaQuery } from '../../hooks/useMediaQuery';
 import { useMore, usePeekOnce } from '../../hooks/useScrollHint';
 import { MobileHeader } from '../../components/Layout';
-import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
+import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, MapMsg, RangeBar, ResidentialBadge, Sk, SkKpi, SurvivalValue } from '../../components/ui';
 import './Search.css';
 
 const DongLeafletMap = lazy(() => import('../../components/DongLeafletMap'));
@@ -68,12 +68,12 @@ export default function Search() {
 
   const cats = useMemo(() => (industries ? groupIndustries(industries) : null), [industries]);
   const industry = findIndustry(industries, industryCode);
-  const big = industry?.category;
   const noSales = !!industry && !hasSales(industry.industry_code);
 
   // ⑱ 업종별 랭킹(전체) — 지도 색칠 · 상위 목록
   const ranking = useApiData(industryCode ? `/regions/rankings?industry_code=${industryCode}` : null);
   const ranked = useMemo(() => ranking.data?.items ?? [], [ranking.data]);
+  const rankBy = useMemo(() => new Map(ranked.map((r) => [r.dong_code, r])), [ranked]); // 구에서 고르기 줄의 순위 · 점수
   const scored = useMemo(() => ranked.filter((x) => x.total_score != null), [ranked]);
   // ⑧ 자치구(대안 경로 · 지도의 구 클릭)
   const districts = useApiData('/regions/districts');
@@ -147,7 +147,7 @@ export default function Search() {
     <>
       <MobileHeader title="직접찾기" />
       <main className="search">
-        <Suspense fallback={<div className="map-msg">지도를 불러오는 중…</div>}>
+        <Suspense fallback={<MapMsg />}>
           <DongLeafletMap selGu={selGu} pins={pins} fills={fills} onPickDong={pickByCode} onPickGu={pickGuGeo} />
         </Suspense>
 
@@ -189,24 +189,8 @@ export default function Search() {
             {!cats ? (
               mastersError
                 ? <BoxMsg title="업종 목록을 불러오지 못했어요" onRetry={loadIndustries} />
-                : <span className="search-hint">업종 목록을 불러오는 중…</span>
-            ) : (
-              <>
-                <span className="search-label desk-only">업종</span>
-                <div className="chip-scroll">
-                  {Object.keys(cats).map((k) => (
-                    <button key={k} type="button" className={`chip sm ${big === k ? 'on' : ''}`} aria-pressed={big === k} onClick={() => setIndustryCode(cats[k][0].code)}>{k}</button>
-                  ))}
-                </div>
-                {big && (
-                  <div className="chip-scroll" key={big}>
-                    {cats[big].map((s) => (
-                      <button key={s.code} type="button" className={`chip sub sm ${industryCode === s.code ? 'on' : ''}`} aria-pressed={industryCode === s.code} onClick={() => setIndustryCode(s.code)}>{s.name}</button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+                : <div aria-busy="true"><span className="sr-only" role="status">업종 목록을 불러오는 중…</span><Sk h={44} r={12} /></div>
+            ) : <IndustryPicker cats={cats} industry={industry} onPick={setIndustryCode} />}
           </div>
 
           <div className="search-body" ref={bodyRef}>
@@ -220,7 +204,7 @@ export default function Search() {
             )}
             {!picked && browse && (
               <Browse
-                districts={districts} dongs={dongs} district={browse.district} guName={guName(browse.district)}
+                districts={districts} dongs={dongs} district={browse.district} guName={guName(browse.district)} industry={industry} rankBy={rankBy}
                 onDistrict={(code) => setBrowse({ district: code })} onClose={() => setBrowse(null)}
                 onPick={(x) => pickDong(toPick(x, guName(browse.district)))}
               />
@@ -233,7 +217,7 @@ export default function Search() {
                 </div>
                 {noSales && <span className="search-hint">{NO_SALES_TEXT} — 서울시 추정매출에 이 업종이 없어요</span>}
                 {ranking.error && <BoxMsg title="순위를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(ranking.error)}`} onRetry={ranking.retry} />}
-                {ranking.loading && <span className="search-hint">순위를 불러오는 중…</span>}
+                {(ranking.loading || (!industryCode && !mastersError)) && <><span className="sr-only" role="status">순위를 불러오는 중…</span>{Array.from({ length: topN }, (_, i) => <SkRow key={i} rank />)}</>}
                 {/* 업종이 바뀌면 key가 바뀌어 등장 애니메이션이 다시 재생된다 */}
                 {scored.slice(0, topN).map((x, i) => (
                   <button key={`${industryCode}-${x.dong_code}`} type="button" className="row" style={{ animationDelay: `${i * 35}ms` }} onClick={() => pickDong(toPick(x))}>
@@ -261,30 +245,97 @@ export default function Search() {
 }
 
 /** ⑧ 자치구 → ⑨ 행정동으로 고르기(자동완성의 대안 경로) */
-function Browse({ districts, dongs, district, guName, onDistrict, onClose, onPick }) {
+function Browse({ districts, dongs, district, guName, industry, rankBy, onDistrict, onClose, onPick }) {
   return (
     <div className="search-list search-browse">
+      {/* 돌아가기는 다른 화면의 [이전]처럼 왼쪽 — 동 목록이면 구 고르기로, 구 고르기면 상위 목록으로 */}
       <div className="head">
+        <button type="button" className="back" aria-label={district ? '구 다시 고르기' : '상위 목록으로'} onClick={district ? () => onDistrict(null) : onClose}>‹</button>
         <b>{district ? `${guName ?? ''} 행정동` : '자치구를 골라 주세요'}</b>
-        <button type="button" className="link" onClick={district ? () => onDistrict(null) : onClose}>{district ? '‹ 구 다시 고르기' : '닫기'}</button>
       </div>
       {!district && (
         districts.error ? <BoxMsg title="자치구 목록을 불러오지 못했어요" onRetry={districts.retry} />
           : (
             <div className="browse-gus">
-              {districts.data?.items.map((d) => (
-                <button key={d.district_code} type="button" className="chip sm" onClick={() => onDistrict(d.district_code)}>{d.name}</button>
+              {districts.loading && Array.from({ length: 24 }, (_, i) => <Sk key={i} h={40} r={10} />)}
+              {districts.data && [...districts.data.items].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((d) => (
+                <button key={d.district_code} type="button" className="gu-btn" onClick={() => onDistrict(d.district_code)}>{d.name}</button>
               ))}
             </div>
           )
       )}
       {district && dongs.error && <BoxMsg title="행정동 목록을 불러오지 못했어요" onRetry={dongs.retry} />}
-      {district && dongs.loading && <span className="search-hint">불러오는 중…</span>}
-      {district && dongs.data?.items.map((x) => (
+      {district && dongs.loading && <><span className="sr-only" role="status">행정동 목록을 불러오는 중…</span>{Array.from({ length: 6 }, (_, i) => <SkRow key={i} />)}</>}
+      {/* 구 이름은 제목에 있어 줄마다 반복하지 않고, 대신 지금 업종의 순위 · 점수(⑱에서 이미 받은 값) */}
+      {district && dongs.data?.items.map((x) => {
+        const r = rankBy.get(x.dong_code);
+        const sub = [r?.rank && `${industry?.name ?? ''} ${r.rank}위`, !x.geo_code && NO_GEO].filter(Boolean).join(' · ');
+        return (
         <button key={x.dong_code} type="button" className="row" onClick={() => onPick(x)}>
-          <span className="name"><b>{x.name}</b><span>{guName}{!x.geo_code && ` · ${NO_GEO}`}</span></span>
+          <span className="name"><b>{x.name}</b>{sub && <span>{sub}</span>}</span>
+          <b className="score">{scoreText(r?.total_score)}</b>
         </button>
-      ))}
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * 업종 고르기(10.4): 지금 업종을 한 줄 버튼으로 두고, 누르면 목록 위에 뜨는 드롭다운에서 이름 검색 · 대분류 탭 · 세부 칩(여러 줄)으로 고른다.
+ * 직접찾기는 매출 데이터가 없는 업종도 남겨 대분류마다 40개 넘게 있어 가로 한 줄 칩 대신 이렇게. 바깥을 누르거나 Esc면 닫힌다
+ */
+function IndustryPicker({ cats, industry, onPick }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState(industry?.category ?? Object.keys(cats)[0]);
+  const [q, setQ] = useState('');
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  const iq = q.trim();
+  const hits = iq ? Object.values(cats).flat().filter((s) => s.name.includes(iq)) : null;
+  const toggle = () => { if (!open) { setTab(industry?.category ?? tab); setQ(''); } setOpen(!open); };
+  const pick = (code) => { onPick(code); setOpen(false); };
+  return (
+    <div className="ind-pick" ref={box} onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}>
+      <button type="button" className={`ind-btn ${open ? 'open' : ''}`} aria-expanded={open} onClick={toggle}>
+        <span className="k">업종</span>
+        <span className="v">{industry && <span className="cat">{industry.category} ›</span>}<b>{industry?.name ?? '업종 고르기'}</b></span>
+        <Icon name="chevronDown" size={16} />
+      </button>
+      {open && (
+        <div className="ind-pop">
+          <input value={q} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setQ(e.target.value)} />
+          {!hits && (
+            <div className="ind-tabs">
+              {Object.keys(cats).map((k) => (
+                <button key={k} type="button" className={`chip sm ${tab === k ? 'on' : ''}`} aria-pressed={tab === k} onClick={() => setTab(k)}>{k}<span>{cats[k].length}</span></button>
+              ))}
+            </div>
+          )}
+          <div className="ind-chips" key={hits ? `q-${iq}` : tab}>
+            {(hits ?? cats[tab]).map((s) => (
+              <button key={s.code} type="button" className={`chip sub sm ${industry?.industry_code === s.code ? 'on' : ''}`} aria-pressed={industry?.industry_code === s.code} onClick={() => pick(s.code)}>{s.name}</button>
+            ))}
+            {hits && !hits.length && <span className="none">‘{iq}’와 일치하는 업종이 없어요</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 목록 한 줄(.row) 자리의 스켈레톤 — 순위(rank) · 이름 두 줄 · 점수(rank일 때) */
+function SkRow({ rank = false }) {
+  return (
+    <div className="row" aria-hidden="true">
+      {rank && <Sk w={24} h={24} r={8} />}
+      <span className="name"><Sk w="45%" h={16} /><Sk w="70%" h={12} /></span>
+      {rank && <Sk w={36} h={22} />}
     </div>
   );
 }
@@ -292,7 +343,15 @@ function Browse({ districts, dongs, district, guName, onDistrict, onClose, onPic
 /** 선택한 동 카드(10.4 5): ⑫ 예측 · 업종 분포 수준. 점포 데이터가 없으면 가까운 동네 안내 */
 function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
   const back = <button type="button" className="round-btn bordered" aria-label="목록으로" onClick={onBack}>‹</button>;
-  if (pred.loading) return <div className="search-none">{back}<span>불러오는 중…</span></div>;
+  const cta = (
+    // 사이드바(모바일은 시트) 맨 아래에 고정 — 다른 화면 하단 바처럼 [이전](목록으로) + [상세 분석 보기]
+    <div className="search-cta">
+      <button type="button" className="btn-ghost rec-bar-back" aria-label="목록으로" onClick={onBack}><BackIcon />이전</button>
+      <Link to={detailPath(x.dong_code, { industryCode: industry?.industry_code, from: 'search' })} className="btn-primary rec-cta">
+        <span className="t">상세 분석 보기</span><Icon name="arrowRight" size={18} />
+      </Link>
+    </div>
+  );
   if (pred.error) {
     return (
       <div className="search-none">
@@ -302,8 +361,8 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
     );
   }
   const p = pred.data;
-  if (!p) return null;
-  if (p.store_count_latest == null) {
+  if (!p && !pred.loading) return null;
+  if (p?.store_count_latest == null && p) {
     return (
       <div className="search-none">
         {back}
@@ -322,56 +381,56 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
       </div>
     );
   }
-  const noPred = p.data_status === '예측 불가';
+  // 예측을 받는 동안에도 카드 뼈대(이름 · 구 · 순위, 안내, 아래 버튼 줄)는 같은 요소로 두고 점수 · 지표 4칸만 막대 → 값.
+  // 카드를 통째로 다시 그리면 값이 올 때 전체가 깜빡여서
+  const loading = !p;
+  const noPred = p?.data_status === '예측 불가';
   const sv = survivalView(p); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
   const noSales = !!industry && !hasSales(industry.industry_code);
-  const sl = noSales || noPred || p.sales_monthly_p50 == null || p.sales_monthly_p10 == null || p.sales_monthly_p90 == null
+  const sl = !p || noSales || noPred || p.sales_monthly_p50 == null || p.sales_monthly_p10 == null || p.sales_monthly_p90 == null
     ? null : [manwon(p.sales_monthly_p10), manwon(p.sales_monthly_p50), manwon(p.sales_monthly_p90)];
   return (
-    <div className="search-result">
+    <div className="search-result" aria-busy={loading}>
+      {loading && <span className="sr-only" role="status">예측을 불러오는 중…</span>}
       <div className="head">
         <div className="id">
-          <span className="name"><b>{x.dong_name}</b>{p.data_status === '표본 부족' && <ResidentialBadge />}</span>
+          <span className="name"><b>{x.dong_name}</b>{p?.data_status === '표본 부족' && <ResidentialBadge />}</span>
           <span className="gu">{x.district_name} · {industry?.name}{rank && ` · ${rank}위`}{!x.geo_code && ` · ${NO_GEO}`}</span>
         </div>
-        <div className="score"><div><b>{scoreText(p.total_score)}</b><span>종합점수</span></div><HeartButton on={fav} onClick={onFav} /></div>
+        <div className="score"><div>{loading ? <Sk w={56} h={30} /> : <b className="fade-in">{scoreText(p.total_score)}</b>}<span>종합점수</span></div><HeartButton on={fav} onClick={onFav} /></div>
       </div>
-      {/* 지표 칸 2×2 — 3단계 상세 패널 · 상세 화면과 같은 타일(.kpi) */}
-      <div className="kpis-2">
-        <div className="kpi" title={sv.note}>
-          <span className="k">{sv.label}</span>
-          <span className="v"><SurvivalValue v={sv} /></span>
-          {sv.sub && <span className="s">{sv.sub}</span>}
+      {/* 지표 칸 2×2 — 3단계 상세 패널 · 상세 화면과 같은 타일(.kpi). key로 막대 ↔ 값을 갈아 끼우며 값은 은은하게 */}
+      {loading ? <div key="sk" className="kpis-2">{[0, 1, 2, 3].map((i) => <SkKpi key={i} />)}</div> : (
+        <div key="v" className="kpis-2 fade-in">
+          <div className="kpi" title={sv.note}>
+            <span className="k">{sv.label}</span>
+            <span className="v"><SurvivalValue v={sv} /></span>
+            {sv.sub && <span className="s">{sv.sub}</span>}
+          </div>
+          <div className="kpi">
+            <span className="k">예상 월매출 <span>· 80% 범위</span></span>
+            <span className="v">{sl ? <><b>{fmt(sl[1])}</b><small>만 원</small></> : <span className="badge badge-gray">{noSales ? '매출 데이터 없음' : '예측 불가'}</span>}</span>
+            {sl && <RangeBar range={sl} max={sl[2] * 1.15} ends={[fmt(sl[0]), fmt(sl[2])]} legend />}
+          </div>
+          <div className="kpi">
+            <span className="k">성장세</span>
+            <span className="v">
+              {p.growth_rate != null
+                ? <b style={{ color: rateColor(p.growth_rate) }}>{growthText(p.growth_rate)}</b>
+                : <span className="badge badge-gray">정보 없음</span>}
+              {p.growth_confidence === '낮음' && <GrowthLowBadge />}
+            </span>
+            <span className="s">최근 1년 vs 직전 1년 매출</span>
+          </div>
+          <div className="kpi">
+            <span className="k">{industry?.name} 점포 수</span>
+            <span className="v"><b className={`lv-tag-${['적음', '보통', '많음'].indexOf(p.store_level)}`}>{p.store_level ?? '정보 없음'}</b></span>
+            <span className="s">최근 분기 {fmt(p.store_count_latest)}곳 · 서울 전체 행정동 기준 3등분</span>
+          </div>
         </div>
-        <div className="kpi">
-          <span className="k">예상 월매출 <span>· 80% 범위</span></span>
-          <span className="v">{sl ? <><b>{fmt(sl[1])}</b><small>만 원</small></> : <span className="badge badge-gray">{noSales ? '매출 데이터 없음' : '예측 불가'}</span>}</span>
-          {sl && <RangeBar range={sl} max={sl[2] * 1.15} ends={[fmt(sl[0]), fmt(sl[2])]} legend />}
-        </div>
-        <div className="kpi">
-          <span className="k">성장세</span>
-          <span className="v">
-            {p.growth_rate != null
-              ? <b style={{ color: rateColor(p.growth_rate) }}>{growthText(p.growth_rate)}</b>
-              : <span className="badge badge-gray">정보 없음</span>}
-            {p.growth_confidence === '낮음' && <GrowthLowBadge />}
-          </span>
-          <span className="s">최근 1년 vs 직전 1년 매출</span>
-        </div>
-        <div className="kpi">
-          <span className="k">{industry?.name} 점포 수</span>
-          <span className="v"><b className={`lv-tag-${['적음', '보통', '많음'].indexOf(p.store_level)}`}>{p.store_level ?? '정보 없음'}</b></span>
-          <span className="s">최근 분기 {fmt(p.store_count_latest)}곳 · 서울 전체 행정동 기준 3등분</span>
-        </div>
-      </div>
+      )}
       <p className="note">예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.</p>
-      {/* 사이드바(모바일은 시트) 맨 아래에 고정 — 다른 화면 하단 바처럼 [이전](목록으로) + [상세 분석 보기] */}
-      <div className="search-cta">
-        <button type="button" className="btn-ghost rec-bar-back" aria-label="목록으로" onClick={onBack}><BackIcon />이전</button>
-        <Link to={detailPath(x.dong_code, { industryCode: industry?.industry_code, from: 'search' })} className="btn-primary rec-cta">
-          <span className="t">상세 분석 보기</span><Icon name="arrowRight" size={18} />
-        </Link>
-      </div>
+      {cta}
     </div>
   );
 }
