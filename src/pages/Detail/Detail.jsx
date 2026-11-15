@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../context/AppState';
 import { useApiData } from '../../hooks/useApiData';
 import { useApiError } from '../../hooks/useApiError';
-import { findIndustry, loadMasters } from '../../lib/masters';
+import { findIndustry } from '../../lib/masters';
+import { useIndustries } from '../../hooks/useIndustries';
 import { isDongCode } from '../../lib/paths';
-import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, signed } from '../../lib/format';
+import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, scoreText, signed } from '../../lib/format';
 import { hasSurvival, survivalView } from '../../lib/survival';
 import { MobileHeader } from '../../components/Layout';
-import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
+import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
 import LegacyDongRedirect from './LegacyDongRedirect';
 import SalesTrend from './SalesTrend';
 import FootTraffic from './FootTraffic';
@@ -48,8 +49,7 @@ function DongDetail({ code }) {
   // ⑥ REC_NOT_FOUND → ts-last의 rec_id만 지운다(useApiError). 그러면 recId가 null이 되어 '추천을 거치면 표시돼요'로 바뀐다
   useEffect(() => { if (m.error?.code === 'REC_NOT_FOUND') handleError(m.error); }, [m.error, handleError]);
 
-  const [industries, setIndustries] = useState(null);
-  useEffect(() => { loadMasters().then((x) => setIndustries(x.industries), () => {}); }, []);
+  const industries = useIndustries();
 
   const back = () => {
     if (fromRec) navigate(`/recommend?step=3&sel=${code}`);
@@ -104,13 +104,12 @@ function DongDetail({ code }) {
   const growth = d.growth;
   const growthLow = growth?.growth_confidence === '낮음';
   const rent = d.rent;
+  const distMax = Math.max(...(d.industry_distribution ?? []).map((r) => r.share), 0) || 1;
 
   return (
     <>
       {header('행정동 상세', <HeartButton on={fav} className="plain" onClick={onFav} />)}
       <main className="page detail">
-        <button type="button" className="round-btn desk-only detail-back" aria-label="뒤로가기" title="뒤로가기" onClick={back}><BackIcon /></button>
-
         <div className="detail-hero">
           <div className="detail-id">
             <div className="detail-name">
@@ -121,7 +120,7 @@ function DongDetail({ code }) {
             <div className="detail-tags"><span>{d.district_name}</span>{industryName && <span>{industryName}</span>}</div>
           </div>
           <div className="detail-score">
-            <div><b>{pred?.total_score ?? '—'}</b><span>종합점수 / 100</span></div>
+            <div><b>{scoreText(pred?.total_score)}</b><span>종합점수 / 100</span></div>
             <HeartButton on={fav} className="lg desk-only" onClick={onFav} />
           </div>
         </div>
@@ -133,44 +132,43 @@ function DongDetail({ code }) {
           </div>
         )}
 
-        <div className="detail-grid">
-          <section className="card detail-card pred">
-            <h2 className="card-title">영업 유지 · 예상 월매출</h2>
-            <Prediction industryCode={industryCode} industryName={industryName} p={p} />
-            <p className="disclaimer">{DISCLAIMER}</p>
-          </section>
-
-          <div className="detail-side">
-            <div className="detail-pair">
-              <section className="card stat-card">
-                <div className="stat-head">
-                  <h2 className="card-title">성장세</h2>
-                  {growthLow && <GrowthLowBadge />}
-                </div>
-                {growth?.growth_rate != null
-                  ? <b className="stat-value" style={{ color: rateColor(growth.growth_rate) }}>{growthText(growth.growth_rate)}</b>
-                  : <span className="badge badge-gray lg">정보 없음</span>}
-                <span className="stat-note">
-                  {growthLow ? '확보된 분기가 적거나 상권 기준이 바뀌어 믿기 어려워요. 참고만 해 주세요.' : '최근 1년 매출이 직전 1년보다 이만큼 변했어요.'}
-                </span>
-              </section>
-              <Margin recId={recId} m={m} gu={d.district_name} />
-            </div>
-            <section className="card stat-card rent">
-              <div className="stat-head">
-                <h2 className="card-title">임대료</h2>
-                {rent?.monthly_rent != null && rent.confidence === '낮음' && <span className="badge badge-warn lg">신뢰도 낮음</span>}
-                {rent?.monthly_rent == null && <span className="badge badge-gray lg">정보 없음</span>}
-              </div>
-              {rent?.monthly_rent != null && <b className="stat-value">월 {fmt(manwon(rent.monthly_rent))}만 원</b>}
-              <span className="stat-note lg">
-                {rent?.monthly_rent == null ? `${d.district_name}는 임대료 조사 자료가 없어요. 직접 확인이 필요해요.`
-                  : rent.confidence === '낮음' ? `${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준). 조사된 상권이 적어 실제와 차이가 클 수 있어요.`
-                    : `이 동이 아닌 ${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준).`}
-              </span>
-            </section>
+        {/* 핵심 숫자 한 줄 — 3단계 상세 패널과 같은 타일(영업 유지 · 예상 월매출 · 성장세 · 예산 여유 · 임대료) */}
+        <div className="detail-kpis">
+          <PredTiles industryCode={industryCode} industryName={industryName} p={p} />
+          <div className="kpi">
+            <span className="k">성장세</span>
+            <span className="v">
+              {growth?.growth_rate != null
+                ? <b style={{ color: rateColor(growth.growth_rate) }}>{growthText(growth.growth_rate)}</b>
+                : <span className="badge badge-gray">정보 없음</span>}
+              {growthLow && <GrowthLowBadge />}
+            </span>
+            <span className="s">{growthLow ? '확보된 분기가 적거나 상권 기준이 바뀌어 믿기 어려워요. 참고만 해 주세요.' : '최근 1년 매출이 직전 1년보다 이만큼 변했어요.'}</span>
           </div>
+          <MarginTile recId={recId} m={m} gu={d.district_name} />
+          <div className="kpi">
+            <span className="k">임대료</span>
+            <span className="v">
+              {rent?.monthly_rent != null
+                ? <><b>월 {fmt(manwon(rent.monthly_rent))}</b><small>만 원</small></>
+                : <span className="badge badge-gray">정보 없음</span>}
+              {rent?.monthly_rent != null && rent.confidence === '낮음' && <span className="badge badge-warn">신뢰도 낮음</span>}
+            </span>
+            <span className="s">
+              {rent?.monthly_rent == null ? `${d.district_name}는 임대료 조사 자료가 없어요. 직접 확인이 필요해요.`
+                : rent.confidence === '낮음' ? `${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준). 조사된 상권이 적어 실제와 차이가 클 수 있어요.`
+                  : `이 동이 아닌 ${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준).`}
+            </span>
+          </div>
+        </div>
 
+        {/* 자세히 볼 차트 3칸(같은 높이): 매출 추이 · 유동 인구 · 업종 분포 */}
+        <div className="detail-grid">
+          <SalesTrend
+            trend={d.sales_trend} breakQuarter={d.space_standard_break}
+            latest={d.latest_quarter} industryName={industryName} empty={<NoLookup what="매출 추이" lookup={noLookup} />}
+          />
+          <FootTraffic pop={d.population_latest} empty={<NoLookup what="유동 인구" />} />
           <section className="card detail-card dist">
             <div className="detail-card-head">
               <h2 className="card-title">업종 분포</h2>
@@ -179,38 +177,45 @@ function DongDetail({ code }) {
             {!d.industry_distribution ? (
               <NoLookup what="업종 분포" lookup={noLookup} />
             ) : (
+              // 막대 길이는 가장 많은 업종을 꽉 채운 상대값(차이가 잘 보이게). 실제 비율은 오른쪽 숫자
               <div className="dist-rows">
                 {d.industry_distribution.map((r) => (
                   <div key={r.industry_code ?? r.name} className={`dist-row ${r.is_selected ? 'hit' : ''}`}>
                     <span className="name">{r.name}</span>
-                    <span className="bar"><i style={{ width: `${Math.round(r.share * 100)}%` }} /></span>
+                    <span className="bar"><i style={{ width: `${(r.share / distMax) * 100}%` }} /></span>
                     <span className="val">{fmt(r.store_count)}곳 · {Math.round(r.share * 100)}%</span>
                   </div>
                 ))}
               </div>
             )}
           </section>
-
-          <SalesTrend
-            trend={d.sales_trend} breakQuarter={d.space_standard_break}
-            latest={d.latest_quarter} industryName={industryName} empty={<NoLookup what="매출 추이" lookup={noLookup} />}
-          />
-          <FootTraffic pop={d.population_latest} empty={<NoLookup what="유동 인구" />} />
         </div>
 
-        <p className="detail-base">
-          상권 지표 기준 {quarterText(a.meta?.base_quarter ?? d.latest_quarter) || '정보 없음'}
-          {rent?.base_quarter && ` · 임대료 기준 ${rentQuarterText(rent.base_quarter)}`}
-        </p>
-
-        <div className="card detail-cta">
-          <div className="text"><b>{d.dong_name}, 다른 곳과도 견줘볼까요?</b><span>관심 상권과 나란히 놓고 비교해요</span></div>
-          <div className="actions">
-            <Link to={fromRec ? '/recommend?step=3' : '/search'} className="btn-ghost">{fromRec ? '다른 추천 동네 보기' : '다른 동네 검색'}</Link>
-            <Link to={`/compare?dongs=${code}${industryCode ? `&industry_code=${industryCode}` : ''}`} className="btn-primary">관심 상권과 비교하기 <span>›</span></Link>
-          </div>
+        {/* 안내 · 기준 분기는 맨 아래(3단계 상세 패널처럼) */}
+        <div className="detail-foot">
+          <p className="disclaimer">{DISCLAIMER}</p>
+          <p className="detail-base">
+            상권 지표 기준 {quarterText(a.meta?.base_quarter ?? d.latest_quarter) || '정보 없음'}
+            {rent?.base_quarter && ` · 임대료 기준 ${rentQuarterText(rent.base_quarter)}`}
+          </p>
         </div>
       </main>
+
+      {/* 하단 바(추천받기와 같은 모양): 데스크톱은 왼쪽 안내 | [이전] + [관심 상권과 비교하기], 모바일은 탭바 위 비교 버튼만(이전은 상단 ‹).
+          [이전]은 추천에서 왔으면 3단계(고른 동 그대로)로 — 예전 '다른 추천 동네 보기'와 같은 곳이라 하나로 합쳤다 */}
+      <div className="rec-bar">
+        <div className="rec-bar-in">
+          <div className="rec-bar-left desk-only">
+            <p className="detail-bar-text"><b>{d.dong_name}</b>, 다른 곳과도 견줘볼까요? <span>관심 상권과 나란히 놓고 비교해요</span></p>
+          </div>
+          <div className="rec-bar-act">
+            <button type="button" className="btn-ghost rec-bar-back desk-only" aria-label="뒤로가기" onClick={back}><BackIcon />이전</button>
+            <Link to={`/compare?dongs=${code}${industryCode ? `&industry_code=${industryCode}` : ''}`} className="btn-primary rec-cta">
+              <span className="t">관심 상권과 비교하기</span><Icon name="arrowRight" size={18} />
+            </Link>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
@@ -226,86 +231,85 @@ function NoLookup({ what, lookup }) {
   );
 }
 
-/** ⑫ 예측 — 중앙값 + 80% 범위(p10~p90). '최소~최대'로 쓰지 않는다 */
-function Prediction({ industryCode, industryName, p }) {
+/**
+ * ⑫ 예측 → 핵심 숫자 두 칸(영업 유지 · 예상 월매출). 중앙값 + 80% 범위(p10~p90) — '최소~최대'로 쓰지 않는다.
+ * 업종이 없거나 · 불러오는 중 · 오류 · 예측 불가면 두 칸 폭 안내 한 칸(.wide)
+ */
+function PredTiles({ industryCode, industryName, p }) {
+  const wide = (body) => <div className="kpi wide pred-none">{body}</div>;
   if (!industryCode) {
-    return (
-      <div className="pred-none">
+    return wide(
+      <>
         <span className="tag">업종 미선택</span>
         <b>업종을 고르면 예측을 볼 수 있어요</b>
         <Link to="/search">직접 찾아보기에서 업종 고르기 ›</Link>
-      </div>
+      </>,
     );
   }
-  if (p.loading) return <div className="pred-none"><span>예측을 불러오는 중…</span></div>;
+  if (p.loading) return wide(<span>예측을 불러오는 중…</span>);
   if (p.error) {
     return p.error.code === 'INDUSTRY_NOT_FOUND'
-      ? <div className="pred-none"><b>업종 정보를 찾을 수 없어요</b><Link to="/search">다른 업종 고르기 ›</Link></div>
-      : <BoxMsg title="예측을 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(p.error)}`} onRetry={p.retry} />;
+      ? wide(<><b>업종 정보를 찾을 수 없어요</b><Link to="/search">다른 업종 고르기 ›</Link></>)
+      : <div className="kpi wide"><BoxMsg title="예측을 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(p.error)}`} onRetry={p.retry} /></div>;
   }
   const x = p.data;
   const sv = survivalView(x); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음(10.8)
   const sl = range(manwon(x.sales_monthly_p10), manwon(x.sales_monthly_p50), manwon(x.sales_monthly_p90));
-  // 카드 전체를 가리는 건 예측 행이 없거나 영업 유지 칸 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
+  // 두 칸을 다 가리는 건 예측 행이 없거나 영업 유지 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
   if (x.data_status === '예측 불가' || (!hasSurvival(sv) && !sl)) {
-    return (
-      <div className="pred-none">
+    return wide(
+      <>
         <span className="tag">예측 불가</span>
         <b>{industryName ?? '이 업종'} 예측에 필요한 데이터가 부족해요</b>
-        <span>아래 업종 분포 · 매출 추이 · 유동 인구는 실제 데이터라 그대로 볼 수 있어요.</span>
-      </div>
+        <span>아래 매출 추이 · 유동 인구 · 업종 분포는 실제 데이터라 그대로 볼 수 있어요.</span>
+      </>,
     );
   }
   return (
-    <div className="pred-metrics">
-      {/* 영업 유지은 확률 · 증감 값이라 80% 범위 막대를 그리지 않는다 */}
-      <div>
-        <div className="metric-head"><span>{sv.label}</span><span><SurvivalValue v={sv} /></span></div>
-        {sv.sub && <div className="pred-range">{sv.sub}</div>}
-        {sv.note && <div className="pred-range">{sv.note}</div>}
+    <>
+      {/* 영업 유지는 확률 · 증감 값이라 80% 범위 막대를 그리지 않는다 */}
+      <div className="kpi">
+        <span className="k">{sv.label}</span>
+        <span className="v"><SurvivalValue v={sv} /></span>
+        {sv.sub && <span className="s">{sv.sub}</span>}
+        {sv.note && <span className="s">{sv.note}</span>}
       </div>
-      {sl ? (
-        <div>
-          <div className="metric-head"><span>예상 월매출</span><span><b>{fmt(sl[1])}</b>만 원</span></div>
-          <RangeBar range={sl} max={sl[2] * 1.15} />
-          <div className="pred-range">80% 범위 {fmt(sl[0])}~{fmt(sl[2])}만 원</div>
-        </div>
-      ) : (
-        <div>
-          <div className="metric-head"><span>예상 월매출</span><span className="badge badge-gray">정보 없음</span></div>
-        </div>
-      )}
-      {x.data_status === '표본 부족' && <span className="pred-range">점포가 적은 주거 지역이라 예측 오차가 클 수 있어요.</span>}
-    </div>
+      <div className="kpi">
+        <span className="k">예상 월매출 <span>· 80% 범위</span></span>
+        <span className="v">{sl ? <><b>{fmt(sl[1])}</b><small>만 원</small></> : <span className="badge badge-gray">정보 없음</span>}</span>
+        {sl && <RangeBar range={sl} max={sl[2] * 1.15} ends={[fmt(sl[0]), fmt(sl[2])]} legend />}
+        {x.data_status === '표본 부족' && <span className="s">점포가 적은 주거 지역이라 예측 오차가 클 수 있어요.</span>}
+      </div>
+    </>
   );
 }
 
 /** ⑥ 예산 여유(구 기준). 추천을 거치지 않았으면 안내만 */
-function Margin({ recId, m, gu }) {
-  let body;
-  if (!recId) body = <span className="badge badge-gray lg">추천을 거치면 표시돼요</span>;
-  else if (m.loading) body = <span className="stat-note">불러오는 중…</span>;
-  else if (m.error) body = <span className="badge badge-gray lg">불러오지 못했어요</span>;
-  else if (m.data?.budget_margin == null) body = <span className="badge badge-gray lg">정보 없음</span>;
+function MarginTile({ recId, m, gu }) {
+  const x = m.data;
+  const v = x?.budget_margin != null ? manwon(x.budget_margin) : null;
+  let value;
+  if (!recId) value = <span className="badge badge-gray">추천을 거치면 표시돼요</span>;
+  else if (m.loading) value = <span className="s">불러오는 중…</span>;
+  else if (m.error) value = <span className="badge badge-gray">불러오지 못했어요</span>;
+  else if (v == null) value = <span className="badge badge-gray">정보 없음</span>;
   else {
-    const v = manwon(m.data.budget_margin);
-    body = (
+    value = (
       <>
-        <b className="stat-value" style={{ color: v >= 0 ? 'var(--green)' : 'var(--down)' }}>{signed(v)} 원</b>
+        <b className="margin" style={{ color: v >= 0 ? 'var(--green)' : 'var(--down)' }}>{signed(v)} 원</b>
         {v < 0 && <span className="badge badge-warn">예산 부족</span>}
       </>
     );
   }
-  const x = m.data;
   return (
-    <section className="card stat-card">
-      <h2 className="card-title">예산 여유</h2>
-      {body}
-      <span className="stat-note">
-        {x?.budget_margin != null
+    <div className="kpi">
+      <span className="k">예산 여유</span>
+      <span className="v">{value}</span>
+      <span className="s">
+        {v != null
           ? `가용 예산 ${fmt(manwon(x.available_budget))}만 − 추정 초기 임대비용 ${fmt(manwon(x.estimated_rent_cost))}만 (${gu} 기준)`
-          : `가용 예산에서 ${gu} 초기 임대비용(보증금 + 월세 3개월)을 뺀 금액이에요.`}
+          : `가용 예산에서 ${gu} 초기 임대비용(보증금\u00a0+ 월세 3개월)\u2060을 뺀 금액이에요.`}{/* 줄이 '+'로 시작하거나 ')'와 '을' 사이에서 끊기지 않게(\u00a0 · \u2060) */}
       </span>
-    </section>
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
 import { findIndustry } from '../../lib/masters';
 import { detailPath, isDongCode } from '../../lib/paths';
-import { areaText, fmt, growthText, manwon, quarterText, rateColor, requestIdText, signed } from '../../lib/format';
+import { areaText, fmt, growthText, manwon, quarterText, rateColor, requestIdText, scoreText, signed } from '../../lib/format';
 import { hasSurvival, survStyle, survivalView } from '../../lib/survival';
 import { useApiError } from '../../hooks/useApiError';
 import { useDongNames } from '../../hooks/useDongNames';
@@ -23,7 +23,7 @@ const won = (v) => fmt(manwon(v));
  * '최고'는 받은 값끼리 견주는 표시용 비교일 뿐이다(10.6 가정). 임대료는 월세가 낮은 쪽이 최고.
  */
 const rowDefs = (hasRec) => [
-  ['종합점수', '0~100', (d) => (d.total_score == null ? na('예측 불가') : { txt: String(d.total_score), className: 'score' }), (d) => d.total_score],
+  ['종합점수', '0~100', (d) => (d.total_score == null ? na('예측 불가') : { txt: scoreText(d.total_score), className: 'score' }), (d) => d.total_score],
   // 영업 유지 칸: 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8). '최고'는 확률끼리만(점포 수 증감엔 없음)
   ['영업 유지', '3년 영업 유지 확률 · 없으면 점포 수 증감', (d) => {
     const v = survivalView(d);
@@ -47,6 +47,19 @@ const rowDefs = (hasRec) => [
     return { txt: `${signed(v)} 원`, color: v >= 0 ? 'var(--green)' : 'var(--down)', warn: d.passed === '제외' && '예산 부족' };
   }, (d) => (hasRec ? d.budget_margin : null)],
 ];
+
+/** 비교 칸 하나(표 · 모바일 항목 카드 공용) */
+function Cell({ c }) {
+  return (
+    <div className={`cmp-cell ${c.className ?? ''}`} style={{ color: c.color }}>
+      {c.txt}
+      {c.best && <span className="cmp-best">최고</span>}
+      {c.badge && <span className="badge badge-gray">{c.badge}</span>}
+      {c.warn && <span className="badge badge-warn">{c.warn}</span>}
+      {c.sub && <span className="cmp-sub">{c.sub}</span>}
+    </div>
+  );
+}
 
 export default function Compare() {
   const { favs, favIndustry, last } = useAppState();
@@ -116,7 +129,7 @@ export default function Compare() {
   return (
     <>
       <MobileHeader title="후보지 비교" />
-      <main className="page">
+      <main className="page cmp">
         <div className="page-head">
           <h1 className="page-title">관심 후보지 비교</h1>
           <p className="page-sub">관심 등록한 곳 중 최대 {MAX}곳을 골라 나란히 봐요.</p>
@@ -150,11 +163,12 @@ export default function Compare() {
                   </button>
                 );
               })}
-              <span className="cmp-count">{sel.length}/{MAX} 선택</span>
+              <span className="cmp-count desk-only">{sel.length}/{MAX} 선택</span>
             </div>
             {baseIndustry && (
               <p className="cmp-base">
                 <b>{industryName(baseIndustry)}</b> 기준으로 비교해요
+                <span className="mob-only"> · {sel.length}/{MAX} 선택</span>
                 {candidates.some(isOff) && ' · 업종이 다른 후보지는 함께 고를 수 없어요'}
               </p>
             )}
@@ -177,40 +191,45 @@ export default function Compare() {
             ) : !items.length ? (
               <div className="card empty" role="status"><span className="desc">비교 정보를 불러오는 중…</span></div>
             ) : (
-              <div className={`card cmp-scroll ${cmp.loading ? 'cmp-loading' : ''}`}>
-                <table className="cmp-table" style={{ '--cols': items.length + (single ? 1 : 0) }}>
+              <>
+              <div className={`card cmp-scroll desk-only ${cmp.loading ? 'cmp-loading' : ''}`}>
+                {/* 행 = 동네, 열 = 항목 — 같은 항목이 세로로 나란히 서서 위아래로 견줘 본다. 동네 열은 왼쪽 고정(좁으면 표를 옆으로 민다) */}
+                <table className="cmp-table" style={{ '--cols': rows.length }}>
                   <thead>
                     <tr>
                       <td />
-                      {items.map((d) => (
-                        <th key={d.dong_code} scope="col">
-                          <Link to={detailPath(d.dong_code, { industryCode: baseIndustry })}><b>{d.dong_name}</b><span>{d.district_name}</span></Link>
-                        </th>
-                      ))}
-                      {single && <th scope="col" className="cmp-slot">비교할 상권을 1곳 더 골라주세요</th>}
+                      {rows.map((row) => <th key={row.label} scope="col">{row.label}<span>{row.note}</span></th>)}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.label}>
-                        <th scope="row">{row.label}<span>{row.note}</span></th>
-                        {row.cells.map((c, i) => (
-                          <td key={items[i].dong_code}>
-                            <div className={`cmp-cell ${c.className ?? ''}`} style={{ color: c.color }}>
-                              {c.txt}
-                              {c.best && <span className="cmp-best">최고</span>}
-                              {c.badge && <span className="badge badge-gray">{c.badge}</span>}
-                              {c.warn && <span className="badge badge-warn">{c.warn}</span>}
-                              {c.sub && <span className="cmp-sub">{c.sub}</span>}
-                            </div>
-                          </td>
-                        ))}
-                        {single && <td className="cmp-slot" />}
+                    {items.map((d, i) => (
+                      <tr key={d.dong_code}>
+                        <th scope="row">
+                          <Link to={detailPath(d.dong_code, { industryCode: baseIndustry })}><b>{d.dong_name} <i aria-hidden="true">›</i></b><span>{d.district_name}</span></Link>
+                        </th>
+                        {rows.map((row) => <td key={row.label}><Cell c={row.cells[i]} /></td>)}
                       </tr>
                     ))}
+                    {single && <tr><td className="cmp-slot" colSpan={rows.length + 1}>비교할 상권을 1곳 더 골라주세요</td></tr>}
                   </tbody>
                 </table>
               </div>
+              {/* 모바일: 표를 옆으로 밀지 않게 항목마다 카드 하나 — 동네들이 세로로 나란히 서서 위아래로 견줘 본다 */}
+              <div className={`cmp-m mob-only ${cmp.loading ? 'cmp-loading' : ''}`}>
+                {single && <p className="cmp-m-slot">비교할 상권을 1곳 더 골라주세요</p>}
+                {rows.map((row) => (
+                  <section key={row.label} className="card cmp-m-sec">
+                    <h2 className="cmp-m-h">{row.label}<span>{row.note}</span></h2>
+                    {items.map((d, i) => (
+                      <div key={d.dong_code} className="cmp-m-row">
+                        <Link to={detailPath(d.dong_code, { industryCode: baseIndustry })} className="nm"><b>{d.dong_name}</b><span>{d.district_name}</span></Link>
+                        <Cell c={row.cells[i]} />
+                      </div>
+                    ))}
+                  </section>
+                ))}
+              </div>
+              </>
             )}
             <p className="disclaimer">
               예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.
