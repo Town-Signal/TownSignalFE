@@ -1,5 +1,5 @@
 // 추천 1 · 2 · 3단계 — API 응답을 화면 모양으로 옮긴다. 예산 · 점수 · 예측은 계산하지 않는다(명세 10.8).
-import { areaSqm, areaText, fmt, growthText, manwon, probText, scoreText, signed } from '../../lib/format';
+import { areaSqm, areaText, daysUntil, fmt, growthText, manwon, probText, scoreText, signed } from '../../lib/format';
 import { survivalView } from '../../lib/survival';
 
 const MANWON = 10000;
@@ -24,7 +24,10 @@ export function toBudgetRequest(cond) {
   };
 }
 
-const programRow = (p) => ({ id: p.program_id, name: p.name, amt: `${fmt(manwon(p.amount))}만` });
+// 마감 공고도 예산에는 그대로 넣는다(명세 7.3). 마감일 당일은 모집 중 — 공고 상세(③)와 같은 판정
+const programRow = (p) => ({
+  id: p.program_id, name: p.name, amt: `${fmt(manwon(p.amount))}만`, closed: p.apply_end != null && daysUntil(p.apply_end) < 0,
+});
 
 // '그 밖의 지원' 유형 표시 순서. 목록에 없는 유형은 뒤에 붙인다
 const CASH_UNKNOWN = '사업화 자금(금액 미확인)';

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { DEFAULT_COND, useAppState } from '../../context/AppState';
 import { useToast } from '../../context/Toast';
 import { api } from '../../lib/api';
-import { findIndustry, loadMasters } from '../../lib/masters';
+import { findIndustry, hasSales, loadMasters } from '../../lib/masters';
 import { requestIdText } from '../../lib/format';
 import { detailPath } from '../../lib/paths';
 import { useApiError } from '../../hooks/useApiError';
@@ -80,7 +80,8 @@ export default function Recommend() {
   // ⑩ · ⑰
   const fetchMasters = useCallback(() => {
     setMastersError(false);
-    loadMasters().then(setMasters).catch((e) => { setMastersError(true); handleError(e); });
+    // 매출 데이터가 없는 업종은 추천할 수 없어 뺀다(직접찾기에는 남김). 저장된 조건이 그 업종이면 resolveIndustry가 같은 대분류 첫 업종으로 맞춘다
+    loadMasters().then((m) => setMasters({ ...m, industries: m.industries.filter((i) => hasSales(i.industry_code)) })).catch((e) => { setMastersError(true); handleError(e); });
   }, [handleError]);
   useEffect(() => { fetchMasters(); }, [fetchMasters]);
   useEffect(() => {

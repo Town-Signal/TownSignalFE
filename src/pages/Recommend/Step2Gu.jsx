@@ -93,7 +93,11 @@ function Programs({ list }) {
   return list.map((p) => (
     <div key={p.id}>
       <div className="program">
-        <Slide><button type="button" className="program-link" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>{p.name}</button></Slide>
+        <Slide>
+          <button type="button" className="program-link" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>
+            {p.name}{p.closed && <span className="badge badge-closed">마감 · 매년 모집</span>}
+          </button>
+        </Slide>
         <b>{p.amt}</b>
       </div>
       {open === p.id && <ProgramDetail id={p.id} />}
