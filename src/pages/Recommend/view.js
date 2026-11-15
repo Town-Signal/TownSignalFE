@@ -1,8 +1,14 @@
 // 추천 1 · 2 · 3단계 — API 응답을 화면 모양으로 옮긴다. 예산 · 점수 · 예측은 계산하지 않는다(명세 10.8).
-import { areaSqm, fmt, growthText, manwon, probText, signed } from '../../lib/format';
+import { areaSqm, areaText, fmt, growthText, manwon, probText, scoreText, signed } from '../../lib/format';
 import { survivalView } from '../../lib/survival';
 
 const MANWON = 10000;
+
+/** 2단계 '입력한 조건' 칩 문구(하단 바 · 모바일 요약 띠 공용). 자본금은 ② 응답의 계산에 쓴 값(만 원) */
+export const condChips = (cond, capital) => [
+  `${cond.age}세`, `자본금 ${fmt(capital)}만 원`, areaText(cond.area),
+  cond.career ? `경력 ${cond.career}년` : '경력 없음', cond.sub, `자격증 ${cond.tags.length}개`,
+];
 
 /**
  * ② 요청 본문. 자본금 만 원 → 원 변환은 여기 한 곳에서만 한다(CLAUDE.md 7절).
@@ -91,15 +97,19 @@ export function toGuView(budget) {
   };
 }
 
-const FACTOR_COLORS = { sales: 'oklch(0.6 0.13 262)', survival: 'oklch(0.6 0.13 170)', growth: 'oklch(0.6 0.13 80)' };
+// 요인 색(구분용): 브랜드 파랑 · 브랜드 민트 · 코랄. 누적 막대에서 이웃해도 색약 시뮬레이션으로 구분되는지 검증함
+// (dataviz validate_palette: CVD ΔE ≥ 11 · 일반 시야 ΔE ≥ 25). 민트는 흰 바탕 대비가 낮아 요인 이름을 늘 글자로 함께 둔다
+const FACTOR_COLORS = { sales: 'oklch(0.55 0.19 262)', survival: 'oklch(0.68 0.13 178)', growth: 'oklch(0.66 0.16 38)' };
 const FACTOR_LABELS = { sales: '매출', survival: '영업 유지', growth: '성장세' };
 
+// 종합점수 글자색: 브랜드 파랑 한 가지의 진하기로(높을수록 진하게) — 크기를 나타내는 색이라 한 색상으로 단계만 둔다.
+// 가장 옅은 단계도 흰 바탕 글자 대비 4.5:1 이상
 const scoreColor = (score) =>
   score == null ? 'var(--muted-2)'
-    : score >= 80 ? 'oklch(0.5 0.13 165)'
-      : score >= 70 ? 'var(--primary)'
-        : score >= 60 ? 'oklch(0.6 0.14 70)'
-          : 'var(--down)';
+    : score >= 80 ? 'oklch(0.42 0.17 264)'
+      : score >= 70 ? 'oklch(0.5 0.15 260)'
+        : score >= 60 ? 'oklch(0.56 0.08 258)'
+          : 'oklch(0.56 0.02 262)';
 
 /**
  * '왜 추천됐나요?' 표시값. 명세 10.3 2.3-5의 표시 공식 그대로:
@@ -142,7 +152,7 @@ export function toDongView(d) {
     gu: d.district_name,
     rankNo: d.rank_no,
     score,
-    scoreTxt: score == null ? '—' : String(score),
+    scoreTxt: scoreText(score), // 표기(82.0). 정렬 · 색 · 막대는 score(숫자)
     scoreColor: scoreColor(score),
     residential: d.is_residential,
     sampleShort: d.data_status === '표본 부족',
