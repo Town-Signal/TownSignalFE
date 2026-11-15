@@ -4,7 +4,7 @@ import { useAppState } from '../../context/AppState';
 import { api } from '../../lib/api';
 import { toApiError } from '../../lib/errors';
 import { loadDongGeo } from '../../lib/geo';
-import { findIndustry, groupIndustries, loadMasters } from '../../lib/masters';
+import { findIndustry, groupIndustries, hasSales, loadMasters } from '../../lib/masters';
 import { detailPath } from '../../lib/paths';
 import { fmt, growthText, manwon, rateColor, requestIdText } from '../../lib/format';
 import { survStyle, survivalView } from '../../lib/survival';
@@ -19,6 +19,7 @@ const PANEL_PAD = 372;
 const AC_DELAY = 200; // 자동완성 요청 간격(ms)
 const NEAR_COUNT = 2; // 가까운 동네 2곳(화면명세서 v0.3)
 const NO_GEO = '지도에 표시되지 않음';
+const NO_SALES_TEXT = '매출 데이터 없음 · 점포 수 증감만';
 
 // 지도 색 단계(⑱ total_score). 그리기용 구간일 뿐 판정에 쓰지 않는다. TODO(가정): 구간 경계
 const SCORE_STEPS = [[80, 'oklch(0.45 0.16 262)'], [65, 'oklch(0.56 0.14 262)'], [50, 'oklch(0.68 0.1 262)'], [35, 'oklch(0.8 0.06 262)'], [-1, 'oklch(0.9 0.03 262)']];
@@ -76,6 +77,7 @@ export default function Search() {
   const cats = useMemo(() => (industries ? groupIndustries(industries) : null), [industries]);
   const industry = findIndustry(industries, industryCode);
   const big = industry?.category;
+  const noSales = !!industry && !hasSales(industry.industry_code);
 
   // ⑱ 업종별 랭킹(전체) — 지도 색칠 · 상위 목록
   const ranking = useApiData(industryCode ? `/regions/rankings?industry_code=${industryCode}` : null);
@@ -234,6 +236,7 @@ export default function Search() {
                   <b>{industry?.name ?? '업종'} 상위 {more ? 10 : 5}곳</b>
                   <button type="button" className="link" onClick={() => setBrowse({ district: null })}>구에서 고르기 ›</button>
                 </div>
+                {noSales && <span className="search-hint">{NO_SALES_TEXT} — 서울시 추정매출에 이 업종이 없어요</span>}
                 {ranking.error && <BoxMsg title="순위를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(ranking.error)}`} onRetry={ranking.retry} />}
                 {ranking.loading && <span className="search-hint">순위를 불러오는 중…</span>}
                 {/* 업종이 바뀌면 key가 바뀌어 등장 애니메이션이 다시 재생된다 */}
@@ -251,7 +254,7 @@ export default function Search() {
                   </button>
                 ))}
                 {scored.length > 5 && <button type="button" className="more" onClick={() => setMore(!more)}>{more ? '접기' : '10위까지 보기'}</button>}
-                {ranking.data && !scored.length && <span className="search-hint">이 업종은 점수가 있는 동네가 없어요</span>}
+                {ranking.data && !scored.length && !noSales && <span className="search-hint">이 업종은 점수가 있는 동네가 없어요</span>}
               </div>
             )}
           </div>
@@ -343,7 +346,7 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
           <span>{sv.label}</span><b style={survStyle(sv)}>{sv.main}</b>{sv.sub && <span>{sv.sub}</span>}
           {sv.low && <GrowthLowBadge />}
         </div>
-        <div className="sales"><span>예상 월매출</span><b>{noPred || p.sales_monthly_p50 == null ? '예측 불가' : `${fmt(manwon(p.sales_monthly_p50))}만`}</b>{!noPred && p.sales_monthly_p10 != null && <span>80% 범위 {sales}</span>}</div>
+        <div className="sales"><span>예상 월매출</span><b>{industry && !hasSales(industry.industry_code) ? '매출 데이터 없음' : noPred || p.sales_monthly_p50 == null ? '예측 불가' : `${fmt(manwon(p.sales_monthly_p50))}만`}</b>{!noPred && p.sales_monthly_p10 != null && <span>80% 범위 {sales}</span>}</div>
         <div className="growth">
           <span>성장세</span>
           <span>{p.growth_confidence === '낮음' && <GrowthLowBadge />}<b style={{ color: rateColor(p.growth_rate) }}>{growthText(p.growth_rate) ?? '정보 없음'}</b></span>

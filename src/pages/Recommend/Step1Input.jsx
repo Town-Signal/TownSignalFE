@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { areaText, fmt } from '../../lib/format';
 import { BoxMsg } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
@@ -23,6 +24,10 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
   const cats = useMemo(() => (masters ? groupIndustries(masters.industries) : null), [masters]);
   const big = cats?.[cond.big] ? cond.big : null; // 빈 폼이면 대분류도 고르지 않은 상태
   const [query, setQuery] = useState('');
+  const [indQuery, setIndQuery] = useState('');
+  const iq = indQuery.trim();
+  // 업종 이름 검색 — 대분류와 상관없이 고를 수 있게(세부 업종이 많아 모바일에서 길다)
+  const indHits = iq && masters ? masters.industries.filter((i) => i.name.includes(iq)) : null;
   const [leaving, setLeaving] = useState(null);
   const leaveTimer = useRef(null);
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
@@ -121,7 +126,31 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, ctaOff,
                   >{k}</button>
                 ))}
               </div>
-              {big ? (
+              <div className="s1-tags">
+                <input value={indQuery} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setIndQuery(e.target.value)} />
+              </div>
+              {indHits ? (
+                <div className="s1-subs">
+                  {indHits.length ? (
+                    <>
+                      <span>‘{iq}’ 검색 결과 {indHits.length}개</span>
+                      <div className="s1-chips" key={iq}>
+                        {indHits.map((i) => (
+                          <button
+                            key={i.industry_code} type="button" className={`chip sub ${cond.industry_code === i.industry_code ? 'on' : ''}`}
+                            aria-pressed={cond.industry_code === i.industry_code}
+                            onClick={() => { setCond({ big: i.category, sub: i.name, industry_code: i.industry_code }); setIndQuery(''); }}
+                          >{i.name}</button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <span>
+                      ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
+                    </span>
+                  )}
+                </div>
+              ) : big ? (
                 <div className="s1-subs">
                   <span>{big} › 세부 업종</span>
                   <div className="s1-chips" key={big}>

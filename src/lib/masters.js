@@ -11,6 +11,18 @@ export function loadMasters() {
   return mastersPromise;
 }
 
+// 서울시 추정매출(OA-22175)에 2021~2025 내내 없는 업종 37개(노승민 11/11 · 노션 15) — 점포 데이터에는 있다.
+// shortcut: ⑩ 응답에 매출 유무 값이 없어 프론트에 목록을 둔다, 서버가 그 값을 주면 이 목록을 지운다.
+const NO_SALES = new Set([
+  'CS200004', 'CS200009', 'CS200010', 'CS200011', 'CS200012', 'CS200013', 'CS200014', 'CS200015', 'CS200018', 'CS200020',
+  'CS200021', 'CS200022', 'CS200023', 'CS200027', 'CS200035', 'CS200038', 'CS200039', 'CS200040', 'CS200041', 'CS200042',
+  'CS200043', 'CS200044', 'CS200045', 'CS200046', 'CS200047',
+  'CS300005', 'CS300012', 'CS300013', 'CS300023', 'CS300030', 'CS300034', 'CS300037', 'CS300038', 'CS300039', 'CS300040',
+  'CS300041', 'CS300042',
+]);
+/** 매출 데이터가 있는 업종인지(추천 업종 선택에서는 없는 업종을 숨긴다) */
+export const hasSales = (code) => !NO_SALES.has(code);
+
 /** ⑩ 목록에서 업종 코드 → 업종 행. 없으면 null */
 export const findIndustry = (industries, code) => industries?.find((i) => i.industry_code === code) ?? null;
 
