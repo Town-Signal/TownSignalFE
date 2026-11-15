@@ -319,4 +319,5 @@
 .program-detail a { color: var(--primary); font-weight: 600; }
 .program-period { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .badge-closed { background: var(--line-soft); color: var(--ink-3); }
+.program-link .badge { display: inline-block; margin-left: 6px; vertical-align: 1px; } /* inline-block이라 링크 밑줄이 배지에 번지지 않는다 */
 .rec-restoring { padding: 24px; text-align: center; color: var(--muted); }
