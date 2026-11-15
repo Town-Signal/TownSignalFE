@@ -209,8 +209,10 @@
 
 
 /* ───── 움직임: 머리 → 요약 → 카드 순서로 은은하게 페이드업 ───── */
-.detail-hero, .detail-kpis > *, .detail-grid > * { animation: fade-up .5s var(--ease-out) backwards; }
-.detail-score > div { animation: fade-in .5s ease .12s backwards; }
+.detail-hero, .detail-kpis > *, .detail-grid > * { animation: sk-rise .4s var(--ease-out) backwards; } /* 늘 스켈레톤 다음에 오므로 옅은 데서(global sk-rise) */
+.detail-loading :is(.detail-hero, .detail-kpis > *, .detail-grid > *) { animation: none; }
+.detail-loading .kpi { min-height: 140px; } /* 실제 타일(값 + 범위 막대 · 설명) 높이에 맞춰 들어올 때 덜 출렁이게 */ /* 스켈레톤은 바로 보이고, 들어오는 움직임은 실제 화면에만 */
+.detail-score > div { animation: sk-in .4s ease .12s backwards; }
 .detail-kpis > :nth-child(1) { animation-delay: 80ms; }
 .detail-kpis > :nth-child(2) { animation-delay: 110ms; }
 .detail-kpis > :nth-child(3) { animation-delay: 140ms; }

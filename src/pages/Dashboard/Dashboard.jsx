@@ -14,7 +14,7 @@ import { usePresence } from '../../hooks/usePresence';
 import { REDUCED_MOTION, useMediaQuery } from '../../hooks/useMediaQuery';
 import { findIndustry } from '../../lib/masters';
 import { Brand, MobileHeader } from '../../components/Layout';
-import { BoxMsg, HeartButton, Icon, LowDot, ResidentialBadge, Toast } from '../../components/ui';
+import { BoxMsg, HeartButton, Icon, LowDot, ResidentialBadge, Sk, Toast } from '../../components/ui';
 import { lastTopItem } from '../Recommend/view';
 import './Dashboard.css';
 
@@ -88,13 +88,13 @@ function RotatingHeadline({ id }) {
   );
 }
 
-/** 히어로 숫자 칩 — 값이 아직 없으면(불러오는 중) '…'만 */
+/** 히어로 숫자 칩 — 값이 아직 없으면(불러오는 중) 숫자 자리에 막대 */
 function HeroStat({ href, label, value, unit }) {
   return (
     <li>
       <a href={href}>
         <span>{label}</span>
-        <b>{value == null ? '…' : <>{value}<small>{unit}</small></>}</b>
+        <b>{value == null ? <Sk w="2.4em" h="1em" className="on-dark" /> : <span className="fade-in">{value}<small>{unit}</small></span>}</b>
       </a>
     </li>
   );
@@ -132,6 +132,26 @@ function NoticeRow({ n }) {
         <Icon name="external" size={16} className="ext" />
       </a>
     </li>
+  );
+}
+
+/** ① 지원 일정을 받는 동안 — 같은 카드 · 두 묶음에 공고 줄 자리(D-day · 제목 · 기관)만 막대 */
+function NoticeSkeleton() {
+  const row = (i) => (
+    <li key={i}><a aria-hidden="true"><Sk w={52} h={30} r={9} /><span className="body"><Sk w="65%" h={16} /><Sk w="40%" h={12} /></span></a></li>
+  );
+  return (
+    <div className="card notice-card" aria-busy="true">
+      <span className="sr-only" role="status">공고를 불러오는 중…</span>
+      <div className="notice-group">
+        <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
+        <ul className="notice-list">{[0, 1, 2].map(row)}</ul>
+      </div>
+      <div className="notice-group">
+        <span className="notice-group-h"><i className="dot" aria-hidden="true" />올해 마감 · 내년 같은 시기 모집 예상</span>
+        <ul className="notice-list">{[3, 4, 5].map(row)}</ul>
+      </div>
+    </div>
   );
 }
 
@@ -369,7 +389,7 @@ export default function Dashboard() {
                 <BoxMsg title="공고를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(notices.error)}`} onRetry={loadNotices} retrying={notices.loading} />
               </div>
             ) : !notices.items ? (
-              <div className="card fav-empty">공고를 불러오는 중…</div>
+              <NoticeSkeleton />
             ) : !notices.items.length ? (
               <div className="card fav-empty">표시할 지원 일정이 없어요</div>
             ) : (
@@ -396,12 +416,14 @@ export default function Dashboard() {
 function FavCard({ code, fallbackName, industryCode, industries, onUnfav, delay = 0 }) {
   const p = useApiData(industryCode ? `/regions/predictions/${code}/${industryCode}` : null);
   const x = p.data;
-  const dongName = x?.dong_name ?? fallbackName?.dong_name ?? code;
+  const dongName = x?.dong_name ?? fallbackName?.dong_name ?? (p.loading ? null : code); // 아직 모르면 막대
   const guName = x?.district_name ?? fallbackName?.district_name;
   const industryName = findIndustry(industries, industryCode)?.name;
   const noPred = x?.data_status === '예측 불가';
   const sv = survivalView(x); // 3년 영업 유지 확률 → 점포 수 증감 → 정보 없음 · 예측 불가(10.8)
-  const stat = (v) => (p.loading ? '…' : !x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
+  const sk = <Sk w={44} h={17} />;
+  const shown = (v) => (p.loading ? sk : <span className="fade-in">{v}</span>); // 막대 → 값이 페이드로
+  const stat = (v) => shown(!x ? '—' : noPred ? '예측 불가' : v ?? '정보 없음');
   const growthLow = x?.growth_confidence === '낮음';
   // 좁은 칸용 짧은 이름 · 보조 줄 — '3년 영업 유지 / 확률', '최근 1년 · 최근 분기 / 42곳'처럼 어색하게 끊기지 않게(원래 이름은 title로)
   const svLabel = sv.kind === 'trend' ? '점포 수 증감' : '3년 영업 유지';
@@ -412,11 +434,11 @@ function FavCard({ code, fallbackName, industryCode, industries, onUnfav, delay 
       <div className="fav-head">
         {/* 카드 전체가 상세로 가는 링크 (::after로 영역 확장) */}
         <Link to={detailPath(code, { industryCode })} className="fav-link">
-          <span className="fav-name"><b>{dongName}</b>{x?.data_status === '표본 부족' && <ResidentialBadge />}</span>
+          <span className="fav-name"><b>{dongName == null ? <Sk w={72} h={20} /> : <span className="fade-in">{dongName}</span>}</b>{x?.data_status === '표본 부족' && <ResidentialBadge />}</span>
           <span className="fav-gu">{[guName, industryName].filter(Boolean).join(' · ')}</span>
         </Link>
-        <div className="fav-score"><b>{scoreText(x?.total_score)}</b><span>종합점수</span></div>
-        <HeartButton on className="sm" onClick={() => onUnfav(dongName)} />
+        <div className="fav-score"><b>{p.loading ? <Sk w={40} h={24} /> : <span className="fade-in">{scoreText(x?.total_score)}</span>}</b><span>종합점수</span></div>
+        <HeartButton on className="sm" onClick={() => onUnfav(dongName ?? code)} />
       </div>
       {!industryCode ? (
         <p className="fav-note">업종을 정하면 점수를 볼 수 있어요</p>
@@ -428,13 +450,13 @@ function FavCard({ code, fallbackName, industryCode, industries, onUnfav, delay 
           <dl className="fav-stats">
             <div>
               <dt title={sv.label}>{svLabel}{sv.low && <LowDot />}</dt>
-              <dd style={survStyle(sv)} title={sv.note}>{p.loading ? '…' : !x ? '—' : sv.main}</dd>
+              <dd style={survStyle(sv)} title={sv.note}>{shown(!x ? '—' : sv.main)}</dd>
               {!p.loading && x && svSub && <span className="surv-sub">{svSub}</span>}
             </div>
             <div><dt>월매출</dt><dd>{stat(x?.sales_monthly_p50 == null ? null : `${fmt(manwon(x.sales_monthly_p50))}만`)}</dd></div>
             <div>
               <dt>성장세{growthLow && <LowDot />}</dt>
-              <dd style={{ color: rateColor(x?.growth_rate) }}>{p.loading ? '…' : growthText(x?.growth_rate) ?? '정보 없음'}</dd>
+              <dd style={{ color: rateColor(x?.growth_rate) }}>{shown(growthText(x?.growth_rate) ?? '정보 없음')}</dd>
             </div>
           </dl>
           {(sv.low || growthLow) && (

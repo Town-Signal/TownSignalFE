@@ -346,7 +346,7 @@
 .notice-none { margin: 0; padding: 10px 0 16px; font-size: 14px; color: var(--muted); }
 .notice-more { display: block; width: 100%; height: 44px; border: none; border-top: 1px solid var(--line-soft); background: none; font-size: 13px; font-weight: 600; color: var(--primary); }
 .notice-list { list-style: none; margin: 0; padding: 0; }
-.notice-list li { animation: fade-up .4s var(--ease-out) backwards; } /* '더 보기'로 펼친 행도 페이드인 */
+.notice-list li { animation: sk-rise .35s var(--ease-out) backwards; } /* 스켈레톤 다음 · '더 보기'로 펼친 행도 옅은 데서 들어옴 */
 .notice-list li + li { border-top: 1px solid var(--line-soft); }
 .notice-list a { display: flex; align-items: center; gap: 14px; padding: 14px 10px; margin: 0 -10px; border-radius: 12px; color: inherit; }
 .notice-list .dday { flex: none; width: 52px; text-align: center; font-size: 13px; font-weight: 700; padding: 6px 0; box-sizing: border-box; white-space: nowrap; border-radius: 9px; background: var(--line-soft); color: var(--ink-3); }

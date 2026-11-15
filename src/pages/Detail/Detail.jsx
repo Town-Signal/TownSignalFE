@@ -9,7 +9,7 @@ import { isDongCode } from '../../lib/paths';
 import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, scoreText, signed } from '../../lib/format';
 import { hasSurvival, survivalView } from '../../lib/survival';
 import { MobileHeader } from '../../components/Layout';
-import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, SurvivalValue } from '../../components/ui';
+import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, Sk, SkKpi, SurvivalValue } from '../../components/ui';
 import LegacyDongRedirect from './LegacyDongRedirect';
 import SalesTrend from './SalesTrend';
 import FootTraffic from './FootTraffic';
@@ -83,11 +83,9 @@ function DongDetail({ code }) {
     return (
       <>
         {header('행정동 상세')}
-        <main className="page">
-          {a.error
-            ? <div className="card"><BoxMsg title="상권 정보를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(a.error)}`} onRetry={a.retry} /></div>
-            : <div className="card empty" role="status"><div className="desc">상권 정보를 불러오는 중…</div></div>}
-        </main>
+        {a.error
+          ? <main className="page"><div className="card"><BoxMsg title="상권 정보를 불러오지 못했어요" desc={`잠시 후 다시 시도해 주세요.${requestIdText(a.error)}`} onRetry={a.retry} /></div></main>
+          : <DetailSkeleton />}
       </>
     );
   }
@@ -220,6 +218,26 @@ function DongDetail({ code }) {
   );
 }
 
+/** 상권 정보를 받기 전 — 실제 화면과 같은 배치(이름 · 점수, 핵심 숫자 5칸, 차트 3칸)에 회색 막대.
+ *  key가 달라 정보가 오면 실제 화면이 새로 그려지며 평소처럼 들어온다 */
+function DetailSkeleton() {
+  return (
+    <main key="sk" className="page detail detail-loading" aria-busy="true">
+      <span className="sr-only" role="status">상권 정보를 불러오는 중…</span>
+      <div className="detail-hero">
+        <div className="detail-id"><Sk w={150} h={40} /><Sk w={130} h={28} /></div>
+        <div className="detail-score"><Sk w={84} h={62} /></div>
+      </div>
+      <div className="detail-kpis">
+        {[0, 1, 2, 3, 4].map((i) => <SkKpi key={i} />)}
+      </div>
+      <div className="detail-grid">
+        {['', '', 'dist'].map((c, i) => <section key={i} className={`card detail-card ${c}`}><Sk w="40%" h={22} /><Sk h={250} /></section>)}
+      </div>
+    </main>
+  );
+}
+
 /** ⑪ data_status "조회 불가"(상권분석 대상이 아닌 동) 또는 항목만 비어 있을 때 */
 function NoLookup({ what, lookup }) {
   return (
@@ -246,7 +264,7 @@ function PredTiles({ industryCode, industryName, p }) {
       </>,
     );
   }
-  if (p.loading) return wide(<span>예측을 불러오는 중…</span>);
+  if (p.loading) return <><span className="sr-only" role="status">예측을 불러오는 중…</span><SkKpi /><SkKpi /></>; // 영업 유지 · 예상 월매출 두 칸 자리
   if (p.error) {
     return p.error.code === 'INDUSTRY_NOT_FOUND'
       ? wide(<><b>업종 정보를 찾을 수 없어요</b><Link to="/search">다른 업종 고르기 ›</Link></>)
@@ -290,7 +308,7 @@ function MarginTile({ recId, m, gu }) {
   const v = x?.budget_margin != null ? manwon(x.budget_margin) : null;
   let value;
   if (!recId) value = <span className="badge badge-gray">추천을 거치면 표시돼요</span>;
-  else if (m.loading) value = <span className="s">불러오는 중…</span>;
+  else if (m.loading) value = <Sk w={110} h={26} />;
   else if (m.error) value = <span className="badge badge-gray">불러오지 못했어요</span>;
   else if (v == null) value = <span className="badge badge-gray">정보 없음</span>;
   else {
@@ -304,7 +322,7 @@ function MarginTile({ recId, m, gu }) {
   return (
     <div className="kpi">
       <span className="k">예산 여유</span>
-      <span className="v">{value}</span>
+      <span key={m.loading ? 'sk' : 'v'} className="v fade-in">{value}</span>
       <span className="s">
         {v != null
           ? `가용 예산 ${fmt(manwon(x.available_budget))}만 − 추정 초기 임대비용 ${fmt(manwon(x.estimated_rent_cost))}만 (${gu} 기준)`

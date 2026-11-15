@@ -86,5 +86,5 @@
 .cmp-scroll { --d: 200ms; }
 /* 고른 칩은 톡 눌리는 느낌을 더한다(들어올 때 지연은 그대로) */
 .cmp-chips > .cmp-chip.on { animation: fade-up .45s var(--ease-out) var(--d, 0ms) backwards, chip-on .3s var(--ease-out); }
-.cmp-cell { animation: fade-in .4s ease backwards; }
+.cmp-cell { animation: sk-in .35s ease backwards; } /* 막대 칸 다음에 오므로 옅은 데서 */
 .cmp-best { animation: pop-in .4s var(--ease-out) .35s backwards; }
