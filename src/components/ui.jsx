@@ -55,6 +55,12 @@ export function HeartButton({ on, onClick, className = '' }) {
   );
 }
 
+/** 불러오는 동안 실제 값 자리에 두는 회색 막대(스켈레톤). 폭 · 높이는 그 자리 글자에 맞추고, 칩 자리는 r로 둥글게 */
+export const Sk = ({ w = '100%', h = 14, r, className = '' }) => (
+  <i className={`sk ${className}`} style={{ width: w, height: h, borderRadius: r }} aria-hidden="true" />
+);
+/** 지표 타일(.kpi) 자리의 스켈레톤 — 이름 · 값 · 설명 세 줄 */
+export const SkKpi = () => <div className="kpi" aria-hidden="true"><Sk w="45%" h={14} /><Sk w="60%" h={30} /><Sk w="85%" h={12} /></div>;
 export const ResidentialBadge = ({ lg }) => <span className={`badge badge-res ${lg ? 'lg' : ''}`}>주거지역</span>;
 export const GrowthLowBadge = ({ title = GROWTH_LOW_TIP }) => <span className="badge badge-warn" title={title}>신뢰도 낮음</span>;
 /**
@@ -156,7 +162,7 @@ export function BoxMsg({ title, desc, onRetry, retrying }) {
 }
 
 export function MapMsg({ error, onRetry }) {
-  if (!error) return <div className="map-msg">지도를 불러오는 중…</div>;
+  if (!error) return <div className="map-msg map-loading" role="status"><span className="sr-only">지도를 불러오는 중…</span></div>;
   return (
     <div className="map-msg error" role="alert">
       <b>{error === 'network' ? '인터넷 연결을 확인해 주세요' : '지도 데이터를 불러오지 못했어요'}</b>

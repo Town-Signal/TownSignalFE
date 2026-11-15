@@ -105,6 +105,17 @@ main[tabindex="-1"]:focus { outline: none; } /* '맨 위로' 뒤 본문으로 �
 @keyframes pop-in { from { opacity: 0; transform: scale(.85); } }
 @keyframes chip-on { from { transform: scale(.94); } }
 @keyframes slide-up { from { transform: translateY(100%); } }
+/* 스켈레톤(ui.jsx Sk): 불러오는 동안 실제 화면과 같은 자리에 회색 막대가 은은하게 깜빡인다(동작 줄이기면 아래 규칙으로 멈춤) */
+.sk { display: inline-block; vertical-align: middle; flex: none; max-width: 100%; border-radius: 6px; background: oklch(0.93 0.006 262); animation: sk-pulse 1.4s ease-in-out infinite; }
+.sk.on-dark { background: oklch(1 0 0 / 0.28); } /* 파란 히어로 위 */
+.sk-lines { display: flex; flex-direction: column; gap: 10px; } /* 막대 여러 줄 */
+/* 스켈레톤 자리에 값이 들어올 때 — 완전히 투명에서 시작하면 막대 → 빈칸 → 값으로 깜빡여 보여서, 옅은 데서 시작해 은은하게 */
+@keyframes sk-in { from { opacity: .4; } }
+@keyframes sk-rise { from { opacity: .4; transform: translateY(6px); } }
+.fade-in { animation: sk-in .35s ease backwards; }
+@keyframes sk-pulse { 50% { opacity: .45; } }
+/* 화면에는 안 보이고 화면 읽기 프로그램만 읽는 글(예: 스켈레톤의 '불러오는 중') */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
   html { scroll-behavior: auto; }
@@ -489,5 +500,6 @@ body:has(.page.dash, .page.rec, .page.detail, .page.cmp) .site-footer-inner { ma
 .box-msg b { font-size: 15px; color: var(--ink); }
 .box-msg button { height: 40px; margin-top: 8px; }
 .map-msg.error { flex-direction: column; gap: 6px; }
+.map-loading { background: oklch(0.94 0.006 262); animation: sk-pulse 1.4s ease-in-out infinite; } /* 지도 자리 스켈레톤 */
 .map-msg.error b { font-size: 15px; color: var(--ink); }
 .map-msg.error button { height: 40px; margin-top: 8px; }
