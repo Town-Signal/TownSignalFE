@@ -32,7 +32,7 @@ API는 항상 상대 경로 `/api/...`로 부른다. 넘겨주는 곳만 다르�
 
 | 환경 | `/api/*`를 넘기는 곳 |
 | --- | --- |
-| 로컬 | `vite.config.js` 프록시 → `http://localhost:8000` |
+| 로컬 | `vite.config.js` 프록시 → `http://localhost:8000`(`.env.local`의 `API_TARGET`이 있으면 그 주소) |
 | 운영 | `vercel.json` rewrites → AWS EC2 API |
 
 ## 원칙

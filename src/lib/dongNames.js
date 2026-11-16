@@ -39,12 +39,17 @@ async function namesFromLists(codes) {
   return out;
 }
 
+// 한 번 찾은 이름은 기억해 둔다 — 이름은 업종과 상관없어서, 비교 화면을 다시 열 때마다 동마다 ⑫를 또 부르지 않게
+const nameCache = {};
+
 /**
  * [[dong_code, industry_code | null], …] → { [dong_code]: { dong_name, district_name } }.
- * 업종이 있으면 ⑫, 없으면 ⑧ · ⑨. 못 찾은 코드는 빠진다(화면은 코드로 대신 표시)
+ * 업종이 있으면 ⑫, 없으면 ⑧ · ⑨. 이미 찾은 동은 다시 부르지 않는다. 못 찾은 코드는 빠진다(화면은 코드로 대신 표시)
  */
 export async function loadDongNames(pairs) {
-  const [withIndustry, withoutIndustry] = [pairs.filter(([, ic]) => ic), pairs.filter(([, ic]) => !ic).map(([c]) => c)];
+  const todo = pairs.filter(([c]) => !nameCache[c]);
+  const [withIndustry, withoutIndustry] = [todo.filter(([, ic]) => ic), todo.filter(([, ic]) => !ic).map(([c]) => c)];
   const [a, b] = await Promise.all([namesFromPredictions(withIndustry), namesFromLists(withoutIndustry)]);
-  return { ...b, ...a };
+  Object.assign(nameCache, b, a);
+  return Object.fromEntries(pairs.map(([c]) => [c, nameCache[c]]).filter(([, v]) => v));
 }

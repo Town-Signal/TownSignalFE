@@ -15,27 +15,76 @@
 .cmp-info { display: flex; gap: 10px; align-items: flex-start; background: oklch(0.97 0.018 262); border: 1px solid oklch(0.91 0.03 262); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.55; word-break: keep-all; }
 .cmp-info i { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; font-style: normal; display: flex; align-items: center; justify-content: center; }
 
-/* 좁은 화면에서는 표를 가로 스크롤하고 항목 열을 고정한다 */
+/* 다른 화면처럼 본문 폭 1440px(항목 열 6개가 넉넉하게) */
+.page.cmp { max-width: 1440px; }
+
+/* 표: 행 = 동네, 열 = 항목. 좁은 화면에서는 표를 가로 스크롤하고 동네 열을 고정한다 */
 .cmp-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
-.cmp-table { width: 100%; min-width: calc(96px + var(--cols) * 140px); border-collapse: separate; border-spacing: 0; table-layout: fixed; text-align: left; }
-.cmp-table th, .cmp-table td { border-bottom: 1px solid var(--line-soft); padding: 0; font-weight: inherit; }
+.cmp-table { width: 100%; min-width: calc(120px + var(--cols) * 150px); border-collapse: separate; border-spacing: 0; table-layout: fixed; text-align: left; }
+.cmp-table th, .cmp-table td { border-bottom: 1px solid var(--line-soft); padding: 0; font-weight: inherit; vertical-align: top; }
 .cmp-table thead th, .cmp-table thead td { border-bottom-color: var(--line); }
 .cmp-table tbody tr:last-child > * { border-bottom: none; }
-.cmp-table tr > :first-child { position: sticky; left: 0; z-index: 2; width: 96px; background: #fff; box-shadow: 1px 0 0 var(--line); }
-.cmp-table tbody th { background: oklch(0.985 0.003 262); padding: 14px 12px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
-.cmp-table tbody th span { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--muted-2); }
-.cmp-table thead a { display: flex; flex-direction: column; gap: 3px; padding: 16px; color: inherit; font-size: 12px; }
-.cmp-table thead a span { color: var(--muted); }
-.cmp-table thead a b { font-size: 16px; }
+.cmp-table tr > :first-child { position: sticky; left: 0; z-index: 2; width: 120px; background: #fff; box-shadow: 1px 0 0 var(--line); }
+/* 머리 줄: 항목 이름 + 보조 설명 */
+.cmp-table thead :is(th, td) { background: oklch(0.985 0.003 262); }
+.cmp-table thead th { padding: 14px 16px; font-size: 13px; font-weight: 600; color: var(--ink-3); vertical-align: bottom; word-break: keep-all; }
+.cmp-table thead th span { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; color: var(--muted-2); }
+/* 동네 칸: 이름(누르면 상세) + 자치구 */
+.cmp-table tbody th a { display: flex; flex-direction: column; gap: 3px; padding: 16px; color: inherit; font-size: 12px; }
+.cmp-table tbody th a b { font-size: 16px; }
+.cmp-table tbody th a i { font-style: normal; color: var(--muted-2); transition: color .2s, margin .2s var(--ease-out); }
+.cmp-table tbody th a span { color: var(--muted); }
+@media (hover: hover) {
+  .cmp-table tbody th a:hover b { color: var(--primary); }
+  .cmp-table tbody th a:hover i { color: var(--primary); margin-left: 3px; }
+}
 .cmp-cell { padding: 14px 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
 .cmp-cell.score { font-size: 22px; font-weight: 800; color: var(--primary); }
 .cmp-cell.dash { font-weight: 400; color: var(--muted-2); }
 .cmp-best { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; background: var(--primary-soft); color: var(--primary); }
 @media (min-width: 900px) {
-  .cmp-table tr > :first-child { width: 112px; }
+  .cmp-table tr > :first-child { width: 160px; }
 }
 
 /* ⑭ 연동: 80% 범위 보조 줄 · 1곳만 골랐을 때 빈 칸 · 다시 받는 동안 흐리게 */
-.cmp-sub { flex-basis: 100%; font-size: 11px; font-weight: 400; color: var(--muted); }
-.cmp-slot { padding: 16px; font-size: 12px; font-weight: 400; color: var(--muted-2); background: oklch(0.985 0.003 262); }
+.cmp-sub { flex-basis: 100%; font-size: 11px; font-weight: 400; color: var(--muted); word-break: keep-all; } /* '32곳'처럼 숫자와 단위가 갈라지지 않게 */
+.cmp-table .cmp-slot { padding: 16px; font-size: 12px; font-weight: 400; color: var(--muted-2); background: oklch(0.985 0.003 262); text-align: center; }
+.cmp-table tr > .cmp-slot:first-child { position: static; width: auto; box-shadow: none; background: oklch(0.985 0.003 262); } /* 1곳만 골랐을 때 빈 행(가로 전체) */
 .cmp-loading { opacity: .6; transition: opacity .2s; }
+
+/* 모바일: 후보 칩은 한 줄 가로 스크롤(세 줄로 쌓여 비교가 밀리지 않게), 비교는 항목별 카드 */
+@media (max-width: 899.98px) {
+  .cmp-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; margin: 0 calc(var(--gutter) * -1); padding: 2px var(--gutter); }
+  .cmp-chips::-webkit-scrollbar { display: none; }
+  .cmp-chip { height: 40px; padding: 0 12px; font-size: 13px; }
+}
+.cmp-m { display: flex; flex-direction: column; gap: 12px; }
+.cmp-m-sec { padding: 16px; display: flex; flex-direction: column; animation: fade-up .45s var(--ease-out) backwards; }
+.cmp-m-sec:nth-child(2) { animation-delay: 40ms; }
+.cmp-m-sec:nth-child(3) { animation-delay: 80ms; }
+.cmp-m-sec:nth-child(n+4) { animation-delay: 120ms; }
+.cmp-m-h { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 15px; font-weight: 700; }
+.cmp-m-h span { font-size: 11px; font-weight: 400; color: var(--muted-2); }
+/* 행: 동네(이름 + 자치구, 누르면 상세) | 값 */
+.cmp-m-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.cmp-m-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cmp-m-row .nm { display: flex; flex-direction: column; gap: 1px; color: inherit; font-size: 11px; }
+.cmp-m-row .nm b { font-size: 14px; }
+.cmp-m-row .nm span { color: var(--muted); }
+.cmp-m-row .cmp-cell { padding: 0; }
+.cmp-m-row .cmp-cell.score { font-size: 20px; }
+.cmp-m-slot { padding: 12px 16px; border: 1px dashed oklch(0.85 0.01 262); border-radius: 12px; text-align: center; font-size: 12px; color: var(--muted-2); }
+
+/* ───── 움직임: 칩 → 안내 → 표 순서로 은은하게, 표 칸은 새로 생길 때마다 페이드인 ───── */
+.cmp-chips > *, .cmp-base, .cmp-info, .cmp-scroll { animation: fade-up .45s var(--ease-out) var(--d, 0ms) backwards; }
+.cmp-chips > :nth-child(2) { --d: 40ms; }
+.cmp-chips > :nth-child(3) { --d: 80ms; }
+.cmp-chips > :nth-child(4) { --d: 120ms; }
+.cmp-chips > :nth-child(n+5) { --d: 160ms; }
+.cmp-base { --d: 120ms; }
+.cmp-info { --d: 160ms; }
+.cmp-scroll { --d: 200ms; }
+/* 고른 칩은 톡 눌리는 느낌을 더한다(들어올 때 지연은 그대로) */
+.cmp-chips > .cmp-chip.on { animation: fade-up .45s var(--ease-out) var(--d, 0ms) backwards, chip-on .3s var(--ease-out); }
+.cmp-cell { animation: sk-in .35s ease backwards; } /* 막대 칸 다음에 오므로 옅은 데서 */
+.cmp-best { animation: pop-in .4s var(--ease-out) .35s backwards; }

@@ -5,7 +5,7 @@ const AppState = createContext(null);
 
 // 저장된 조건이 없으면(최초 접속) 1단계를 이 기본값으로 연다 — 25세 · 경력 2년 · 자본금 3,000만 원 · 희망 면적 33㎡(7.1).
 // 업종 · 자격증은 비워 둔다. 사용자가 바꾸기 전에는 ts-cond에 저장하지 않는다(usePersist)
-const DEFAULT_COND = {
+export const DEFAULT_COND = {
   age: '25', capital: 3000, area: '33', career: 2, big: null, sub: null, industry_code: null, tags: [],
 };
 // 목업 시절 첫 진입에 자동 저장되던 데모 조건 — 사용자가 넣은 값이 아니므로 읽을 때 버린다
@@ -52,7 +52,8 @@ const isTopItem = (t) => t && typeof t === 'object' && !Array.isArray(t) && type
 const isMargins = (m) => m && typeof m === 'object' && !Array.isArray(m) && Object.keys(m).every((k) => /^\d{5}$/.test(k));
 const loadLast = () => {
   const v = LS.get('ts-last', null);
-  const ok = v && typeof v === 'object' && typeof v.rec_id === 'string' && UUID_RE.test(v.rec_id)
+  // rec_id는 UUID 또는 null — 스냅샷이 만료되면(REC_NOT_FOUND) clearRecId가 rec_id만 null로 바꾸고 요약은 남긴다
+  const ok = v && typeof v === 'object' && (v.rec_id === null || (typeof v.rec_id === 'string' && UUID_RE.test(v.rec_id)))
     && Array.isArray(v.top) && v.top.length > 0 && v.top.every(isTopItem);
   if (v != null && !ok) LS.remove('ts-last');
   if (!ok) return null;
@@ -95,6 +96,15 @@ export function AppStateProvider({ children }) {
   usePersist('ts-fav-sub', favSubs);
   usePersist('ts-cond', cond);
   usePersist('ts-last', last);
+
+  // 다른 탭에서 바꾼 값을 받아 온다 — 안 그러면 탭 두 개에서 각각 관심 등록할 때 마지막에 쓴 탭이 다른 탭의 등록을 지운다.
+  // (같은 값을 다시 써도 storage 이벤트는 생기지 않아 탭끼리 주고받기를 반복하지 않는다)
+  useEffect(() => {
+    const reload = { 'ts-favs': () => setFavs(loadFavs()), 'ts-fav-sub': () => setFavSubs(loadFavSubs()), 'ts-cond': () => setCondState(loadCond()), 'ts-last': () => setLast(loadLast()) };
+    const onStorage = (e) => { if (e.key in reload) reload[e.key](); };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // 관심 등록 · 해제는 dong_code로. 등록 때 보던 업종(industry_code)을 함께 기억하고(비교 기준), 해제하면 같이 지운다(10.7)
   const addFav = useCallback((code, industryCode, at) => {

@@ -1,5 +1,9 @@
-.detail { gap: 16px; }
-.detail-back { align-self: flex-start; margin-left: -8px; }
+/* 대시보드 · 추천받기처럼 본문 폭 1440px(하단 바 · 바닥글과 줄을 맞춘다) */
+.page.detail { max-width: 1440px; gap: 16px; }
+/* 하단 바 왼쪽 안내(데스크톱) */
+.detail-bar-text { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-bar-text b { font-size: 16px; color: var(--ink); }
+.detail-bar-text span { margin-left: 6px; }
 
 .detail-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 4px 0 8px; }
 .detail-id { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -15,29 +19,47 @@
 .ai-summary {
   border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; color: oklch(0.26 0.04 270);
   background: linear-gradient(120deg, oklch(0.965 0.022 262), oklch(0.965 0.022 305) 50%, oklch(0.97 0.02 195)); background-size: 200% 200%;
-  animation: ai-shift 10s ease-in-out infinite alternate;
+  animation: fade-up .5s var(--ease-out) 60ms backwards, ai-shift 10s ease-in-out infinite alternate;
   box-shadow: 0 14px 32px -24px oklch(0.55 0.12 280 / 0.5);
 }
 .ai-summary p { font-size: 16px; line-height: 1.6; font-weight: 500; text-wrap: pretty; word-break: keep-all; }
 .ai-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: oklch(0.45 0.13 285); }
 .ai-tag i { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, oklch(0.6 0.16 262), oklch(0.62 0.15 305)); color: #fff; font-size: 11px; font-style: normal; display: flex; align-items: center; justify-content: center; }
 
-/* 1열 → 2열(720px~) → 6칸 격자(1180px~) */
+/* 핵심 숫자 한 줄: 3단계 상세 패널과 같은 타일(.kpi, global) — 페이지 바탕 위라 흰 카드로. 2칸 → 3칸(720px~) → 5칸(1180px~) */
+.detail-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.detail-kpis .kpi { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); padding: 14px 18px; gap: 4px; }
+/* 높이를 아끼려고 상세 화면 타일만 숫자 · 여백을 조금 줄인다(3단계 패널 타일은 그대로) */
+.detail-kpis .kpi .v { min-height: 30px; }
+.detail-kpis .kpi .v b { font-size: 24px; }
+.detail-kpis .kpi .v b.margin { font-size: 20px; }
+.detail-kpis :is(.range-ends, .range-legend) { margin-top: 2px; }
+.detail-kpis .kpi.wide { grid-column: span 2; }
+.detail-kpis .pred-none { background: transparent; box-shadow: none; justify-content: center; }
+@media (max-width: 719.98px) {
+  /* 2칸일 때 혼자 남는 마지막 타일(임대료)은 가로 전체 */
+  .detail-kpis > :last-child:nth-child(odd), .detail-kpis:has(.wide) > :last-child { grid-column: 1 / -1; }
+}
+/* 중간 폭(720~1179px): 6칸 격자에 3개 + 2개 — 둘째 줄 두 타일이 폭을 나눠 채워 빈 칸이 생기지 않게(안내 칸은 4칸 폭) */
+@media (min-width: 720px) and (max-width: 1179.98px) {
+  .detail-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .detail-kpis > * { grid-column: span 2; }
+  .detail-kpis > :nth-last-child(-n + 2) { grid-column: span 3; }
+  .detail-kpis .kpi.wide { grid-column: span 4; }
+}
+@media (min-width: 1180px) {
+  .detail-kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+/* 차트 3칸(같은 높이): 1열 → 2열(720px~, 업종 분포는 아래 가로 전체) → 3열(1180px~) */
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: stretch; }
 @media (min-width: 720px) {
   .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .detail-grid .pred { grid-column: 1 / -1; }
+  .detail-grid .dist { grid-column: 1 / -1; }
 }
-/* 예측 카드가 가로로 넓은 구간에서는 두 지표를 나란히 */
-@media (min-width: 720px) and (max-width: 1179.98px) {
-  .detail-grid .pred-metrics { flex-direction: row; }
-  .detail-grid .pred-metrics > div { flex: 1; }
-}
-/* 윗줄: 예측 | 성장·예산·임대 | 업종 분포, 아랫줄: 매출 추이 | 유동 인구 */
 @media (min-width: 1180px) {
-  .detail-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .detail-grid .pred, .detail-grid .detail-side, .detail-grid .dist { grid-column: span 2; }
-  .detail-grid .trend, .detail-grid .foot { grid-column: span 3; }
+  .detail-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .detail-grid .dist { grid-column: auto; }
 }
 
 .detail-card { padding: 22px; display: flex; flex-direction: column; gap: 14px; justify-content: space-between; min-width: 0; }
@@ -45,34 +67,41 @@
 .detail-card-head .card-title { white-space: nowrap; }
 .detail-card .sub { font-size: 13px; color: var(--muted); }
 .detail-card .sub b { color: var(--ink); }
+.detail-card.dist { justify-content: flex-start; } /* 막대는 제목 바로 아래부터(아래로 밀려 위가 비지 않게) */
+/* 옆 카드(유동 인구 등)에 높이를 맞춰 늘어나면 행 묶음이 남는 높이를 채우고 행 사이를 고르게 벌린다(아래가 비지 않게). 내용만큼일 땐 그대로 */
+.detail-card.dist .dist-rows { flex: 1; justify-content: space-between; }
 
-.pred { gap: 20px; justify-content: flex-start; }
-.pred-metrics { display: flex; flex-direction: column; gap: 20px 28px; }
-.pred-range { margin-top: 6px; font-size: 12px; color: var(--muted); }
 .pred-none { border: 1px dashed oklch(0.8 0.012 262); border-radius: 14px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--muted); word-break: keep-all; }
 .pred-none b { font-size: 14px; font-weight: 600; color: var(--ink); }
 .pred-none .tag { font-size: 12px; font-weight: 600; padding: 3px 7px; border-radius: 6px; border: 1px dashed oklch(0.7 0.015 262); color: oklch(0.45 0.02 262); }
-.pred .disclaimer { margin-top: auto; }
 
-.detail-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.detail-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
-.stat-card { container-type: inline-size; min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
-.stat-card.rent { flex: 1; gap: 10px; justify-content: space-between; }
-.stat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.stat-card > .badge { align-self: flex-start; }
-.stat-value { font-size: clamp(20px, 6cqw, 26px); letter-spacing: -0.02em; white-space: nowrap; }
-.stat-note { font-size: 12px; color: var(--muted); line-height: 1.5; word-break: keep-all; text-wrap: balance; }
-.stat-note.lg { font-size: 13px; line-height: 1.6; }
+/* 맨 아래: 안내(왼쪽) · 기준 분기(오른쪽) */
+.detail-foot { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px 32px; margin-top: 4px; }
+.detail-foot .disclaimer { flex: 1 1 420px; max-width: 820px; }
 
 /* 매출 추이 */
-.trend-chart { position: relative; }
-.trend-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-@keyframes trend-flat { from { transform: scaleY(0); opacity: .2; } }
-.trend-rise { transform-origin: 0 118px; animation: trend-flat .8s var(--ease) .1s both; }
-.trend-line { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
-.trend-guide { stroke: var(--primary); stroke-dasharray: 3 3; opacity: .5; }
-.trend-dot { cursor: pointer; animation: fade-in .3s ease .75s both; }
-.trend-labels { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); white-space: nowrap; letter-spacing: -0.02em; font-size: 10px; color: var(--muted-2); text-align: center; }
+/* 매출 추이: 8분기 꺾은선. 0부터 시작하지 않는 확대 그래프라 최고 · 최저 기준선(점선)에 값을 왼쪽 바깥에 적는다(왼쪽 40px 여백).
+   상권 기준이 바뀐 분기 앞은 주황 점선 경계(위에 라벨, 그래서 위 22px 여백) + 선을 끊는다.
+   움직임: 평균 높이의 평평한 선으로 나왔다가 점마다 제 높이로 움직여 모양을 잡는다(선은 SalesTrend의 SVG <animate>, 점은 아래 trend-morph — .9s 같은 가속) */
+.trend-plot { position: relative; height: 140px; margin: 22px 0 0 40px; }
+.trend-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.trend-line { fill: none; stroke: var(--primary); stroke-width: 2.5px; stroke-linejoin: round; stroke-linecap: round; }
+.trend-grid { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); }
+.trend-grid span { position: absolute; right: calc(100% + 6px); top: -7px; font-size: 10px; line-height: 1.2; color: var(--muted-2); white-space: nowrap; }
+.trend-break { position: absolute; top: -18px; bottom: 0; border-left: 1.5px dashed oklch(0.6 0.12 40); }
+.trend-break span { position: absolute; left: 4px; top: -1px; font-size: 10px; white-space: nowrap; color: oklch(0.5 0.12 40); }
+.trend-cross { position: absolute; top: 0; bottom: 0; border-left: 1px solid oklch(0.85 0.01 262); animation: fade-in .18s ease; }
+.trend-dot { position: absolute; top: var(--flat); width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px var(--primary); pointer-events: none; transition: scale .2s var(--ease-out); }
+/* 보이기 전엔 평평한 선 위(--flat), 보이면 .3s 뒤 제 높이(--y)로 — 선의 <animate>와 같은 시간 · 가속. 동작 줄이기면 처음부터 제 높이 */
+.trend-plot.play .trend-dot { top: var(--y); animation: trend-morph .9s cubic-bezier(.22, .8, .3, 1) .3s both; }
+.trend-plot.still .trend-dot { top: var(--y); }
+@keyframes trend-morph { from { top: var(--flat); } }
+.trend-dot.last { width: 10px; height: 10px; margin: -5px 0 0 -5px; background: var(--primary); } /* 가장 최근 분기 */
+.trend-dot.on { scale: 1.4; }
+.trend-hits { position: absolute; inset: -10px 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.trend-hits > div { cursor: pointer; }
+/* 분기 라벨: 그래프와 같은 왼쪽 여백 · 같은 8칸(점과 가운데가 맞게 틈 없음) */
+.trend-labels { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); margin: 8px 0 0 40px; white-space: nowrap; letter-spacing: -0.02em; font-size: 10px; color: var(--muted-2); text-align: center; }
 .trend-labels .missing { color: oklch(0.82 0.008 262); }
 
 .chart-tip {
@@ -80,7 +109,10 @@
   background: var(--ink); color: #fff; border-radius: 8px; padding: 5px 10px;
   display: flex; flex-direction: column; align-items: center; gap: 1px; white-space: nowrap;
   font-size: 11px; box-shadow: var(--shadow-pop);
+  transform-origin: bottom center; animation: tip-in .18s var(--ease-out);
 }
+/* 툴팁이 점 · 사람 위로 살짝 떠오르며 나타난다(칸마다 새로 그려져 옮길 때마다 재생). 위치는 transform이 잡고 있어 움직임은 translate · scale로 따로 */
+@keyframes tip-in { from { opacity: 0; translate: 0 4px; scale: .94; } }
 .chart-tip span { color: oklch(0.82 0.01 262); }
 .chart-tip b { font-size: 13px; }
 .chart-tip.above { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 6px 10px; align-items: flex-start; gap: 2px; font-size: 12px; }
@@ -89,59 +121,113 @@
 
 /* 유동 인구 */
 .foot { gap: 16px; --m: oklch(0.6 0.13 262); --f: oklch(0.72 0.12 15); }
-.foot-gender { display: flex; flex-direction: column; gap: 6px; }
+.foot-gender { display: flex; flex-direction: column; gap: 12px; } /* 비율 막대와 아래 남성 · 토글 · 여성 줄 사이 */
 .foot-split { display: flex; height: 12px; border-radius: 6px; overflow: hidden; }
 .foot-split div { transform-origin: left; animation: grow-x .7s var(--ease) both; }
 .foot-split .m { background: var(--m); }
 .foot-split .f { background: var(--f); animation-delay: .12s; }
 .foot-chips { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
-.foot-chip { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 18px; border: 1px solid oklch(0.92 0.006 262); background: #fff; color: var(--ink-2); font-size: 12px; font-weight: 600; }
+/* 남성 · 여성: 테두리 없이 글자만(작은 색 네모는 위 막대의 범례) */
+.foot-chip { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; font-weight: 600; }
 .foot-chip i { width: 8px; height: 8px; border-radius: 2px; }
 .foot-chip.m i { background: var(--m); }
 .foot-chip.f { order: 3; }
 .foot-chip.f i { background: var(--f); }
-.foot-chip.on { color: #fff; }
-.foot-chip.on i { background: #fff; }
-.foot-chip.m.on { background: var(--m); border-color: var(--m); }
-.foot-chip.f.on { background: var(--f); border-color: var(--f); }
-.foot-all { order: 2; flex: none; height: 32px; padding: 0 10px; border: none; border-radius: 16px; background: oklch(0.95 0.005 262); color: oklch(0.45 0.02 262); font-size: 12px; font-weight: 600; }
+/* 시간대 ↔ 연령대 토글: 연령대를 보는 동안 켜진 색(파랑), 누르면 살짝 눌리고 ⇄가 반 바퀴, 글자는 아래에서 올라오며 바뀐다 */
+.foot-all {
+  order: 2; flex: none; display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px 0 10px; border: none; border-radius: 16px;
+  background: oklch(0.95 0.005 262); color: oklch(0.45 0.02 262); font-size: 12px; font-weight: 600; overflow: hidden;
+  transition: background-color .25s, color .25s, transform .15s var(--ease-out);
+  will-change: transform; /* 누를 때 작아졌다 커지는 동안 글자를 매 프레임 다시 그리지 않게(떨림 방지) */
+}
+.foot-all[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); }
+.foot-all:active { transform: scale(.95); }
+.foot-all svg { flex: none; transition: transform .35s var(--ease-out); will-change: transform; } /* 돌아가는 동안 작은 선 아이콘을 매 프레임 다시 그리면 가장자리가 떨려 보여, 한 번 그린 그림을 돌린다 */
+.foot-all[aria-pressed="true"] svg { transform: rotate(180deg); }
+.foot-all .lbl { animation: foot-lbl-in .28s var(--ease-out); }
+@keyframes foot-lbl-in { from { opacity: 0; transform: translateY(8px); } }
+@media (hover: hover) {
+  .foot-all:not([aria-pressed="true"]):hover { background: oklch(0.92 0.006 262); }
+}
 
 @keyframes grow-y { from { transform: scaleY(0); } }
-.foot-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items: end; height: 120px; --bar: var(--primary); }
+.foot-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; align-items: end; height: 150px; --bar: var(--primary); } /* 머리 · 어깨를 빼고도 키 차이가 보이게 */
 .foot-bars.m { --bar: var(--m); }
 .foot-bars.f { --bar: var(--f); }
 .foot-col { position: relative; display: flex; justify-content: center; align-items: flex-end; height: 100%; cursor: pointer; border-radius: 6px; }
 .foot-col.hover { background: oklch(0.97 0.006 262); }
 .foot-col .bar { width: 62%; max-width: 34px; border-radius: 5px 5px 0 0; background: var(--bar); opacity: .4; transform-origin: bottom; animation: grow-y .6s var(--ease) both; transition: height .35s var(--ease), background .2s, opacity .2s; }
+/* 유동 인구는 칸마다 같은 체격(폭 --w)의 사람 한 명 — 키(높이)만 값에 비례해 막대처럼 바닥에 맞춰 읽는다(폭은 같아 큰 값이 부풀려 보이지 않음).
+   마스크 네 겹: 머리(원) · 두 팔 · 어깨(위 모서리가 둥근 조각)는 크기 고정, 그 아래 직사각형 몸통만 남은 높이만큼 늘어난다(늘려도 찌그러지지 않음).
+   --top = 몸통이 시작하는 높이(머리 아래) */
+.foot-bars .bar {
+  --w: 34px;
+  --top: calc(var(--w) * 0.55); /* 머리(지름 ≈ 0.49w) 아래 2px 틈 */
+  --head: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 8'%3E%3Ccircle cx='7' cy='3.5' r='3.4'/%3E%3C/svg%3E"); /* 몸통(0.57w)보다 조금 좁게 */
+  --arms: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 12'%3E%3Crect x='0' y='0.5' width='2.6' height='10.5' rx='1.3'/%3E%3Crect x='11.4' y='0.5' width='2.6' height='10.5' rx='1.3'/%3E%3C/svg%3E");
+  --shoulder: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 4'%3E%3Cpath d='M0 4V2.5A2.5 2.5 0 0 1 2.5 0h4A2.5 2.5 0 0 1 9 2.5V4z'/%3E%3C/svg%3E");
+  --person-mask:
+    var(--head) top center / 100% auto no-repeat,
+    var(--arms) center calc(var(--top) + 2px) / 100% auto no-repeat,
+    var(--shoulder) center var(--top) / 57% auto no-repeat,
+    linear-gradient(#000, #000) bottom center / 57% calc(100% - var(--w) * 0.78) no-repeat; /* 어깨 조각 아래부터(1px 겹침) */
+  width: var(--w); max-width: none; border-radius: 0;
+  -webkit-mask: var(--person-mask); mask: var(--person-mask);
+  animation: person-rise .7s cubic-bezier(.22, .8, .3, 1) both; /* 지연은 칸마다 인라인. 세로로 늘이면(grow-y) 머리가 찌그러져서 쓰지 않는다 */
+  transition: height .35s var(--ease), opacity .2s, translate .25s var(--ease-out);
+}
+/* 움직임(은은하게): 왼쪽부터 차례로 바닥 아래에서 사람이 쑥 올라온다 — 내려간 만큼 아래를 잘라(clip 아래쪽 = 내려간 양)
+   바닥선 위로만 보이고 머리부터 나온다. 다 나온 뒤 가장 많은 칸의 사람만 한 번 폴짝, 마우스를 올리면(탭하면) 그 사람이 살짝 올라선다.
+   올라서기는 translate로 — transform은 올라오기 애니메이션(fill both)이 붙잡고 있어 겹치지 않게 */
+@keyframes person-rise {
+  from { transform: translateY(100%); clip-path: inset(0 0 100% 0); }
+  to { transform: none; clip-path: inset(0); }
+}
+@keyframes person-hop { 0%, 100% { transform: none; } 35% { transform: translateY(-8px); } 60% { transform: translateY(1px); } }
+.foot-bars .foot-col.peak { animation: person-hop .6s var(--ease-out) 1.25s; }
+.foot-bars .foot-col.hover .bar { translate: 0 -4px; }
 .foot-col.strong .bar { opacity: 1; }
 .foot-labels { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: -8px; white-space: nowrap; font-size: 11px; color: var(--muted); text-align: center; }
 
-.detail-cta { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; }
-.detail-cta .text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 220px; font-size: 13px; color: var(--muted); }
-.detail-cta .text b { font-size: 16px; color: var(--ink); }
-.detail-cta .actions { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 320px; justify-content: flex-end; }
-.detail-cta .actions a { flex: 1 1 150px; padding: 0 16px; font-size: 14px; }
-@media (min-width: 720px) {
-  .detail-cta .actions a { max-width: 220px; }
-}
-
 /* 추천 배지 · 기준 분기 */
 .badge-rec { background: oklch(0.95 0.04 262); color: var(--primary); }
-.detail-base { font-size: 12px; color: var(--muted); text-align: right; }
+.detail-base { margin-left: auto; font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
 
 /* 업종 분포: 비율 막대(⑪ share) */
 .dist-rows { display: flex; flex-direction: column; gap: 10px; }
-.dist-row { display: grid; grid-template-columns: minmax(64px, 7em) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+/* 행: 윗줄 이름 | 곳 수 · 비율, 아랫줄 막대(카드 폭 전체) — 한 줄 배치보다 높이를 자연스럽게 써서 행 사이가 휑하지 않고 막대도 길다 */
+.dist-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name val' 'bar bar'; align-items: baseline; gap: 6px 10px; font-size: 13px; }
+.dist-row .name { grid-area: name; }
+.dist-row .val { grid-area: val; }
+.dist-row .bar { grid-area: bar; }
 .dist-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
-.dist-row .bar { height: 8px; border-radius: 4px; background: oklch(0.95 0.005 262); overflow: hidden; }
+.dist-row .bar { height: 14px; } /* 회색 트랙 없음 — 막대는 가장 많은 업종 기준 상대 길이라 꽉 찬 막대가 100%로 읽히지 않게 */
 .dist-row .bar i { display: block; height: 100%; border-radius: 4px; background: oklch(0.78 0.06 262); transform-origin: left; animation: grow-x .6s var(--ease) both; }
 .dist-row .val { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .dist-row.hit .name { font-weight: 700; color: var(--primary); }
 .dist-row.hit .bar i { background: var(--primary); }
 
-/* 매출 추이: 8분기 막대 + 상권 기준 변경 경계선 */
-.trend-bars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; align-items: end; height: 140px; padding-top: 18px; --bar: var(--primary); }
-.trend-bars .bar.empty { height: 100%; opacity: 1; background: none; border: 1px dashed oklch(0.85 0.008 262); border-bottom: none; }
-.trend-bars .foot-col.break::before { content: ''; position: absolute; left: -4px; top: -18px; bottom: 0; border-left: 1.5px dashed oklch(0.6 0.12 40); }
-.trend-bars .break-label { position: absolute; left: -2px; top: -18px; font-size: 10px; white-space: nowrap; color: oklch(0.5 0.12 40); }
-.trend-labels { gap: 6px; }
+
+/* ───── 움직임: 머리 → 요약 → 카드 순서로 은은하게 페이드업 ───── */
+.detail-hero, .detail-kpis > *, .detail-grid > * { animation: sk-rise .4s var(--ease-out) backwards; } /* 늘 스켈레톤 다음에 오므로 옅은 데서(global sk-rise) */
+.detail-loading :is(.detail-hero, .detail-kpis > *, .detail-grid > *) { animation: none; }
+.detail-loading .kpi { min-height: 140px; } /* 실제 타일(값 + 범위 막대 · 설명) 높이에 맞춰 들어올 때 덜 출렁이게 */ /* 스켈레톤은 바로 보이고, 들어오는 움직임은 실제 화면에만 */
+.detail-score > div { animation: sk-in .4s ease .12s backwards; }
+.detail-kpis > :nth-child(1) { animation-delay: 80ms; }
+.detail-kpis > :nth-child(2) { animation-delay: 110ms; }
+.detail-kpis > :nth-child(3) { animation-delay: 140ms; }
+.detail-kpis > :nth-child(4) { animation-delay: 170ms; }
+.detail-kpis > :nth-child(5) { animation-delay: 200ms; }
+.detail-grid > :nth-child(1) { animation-delay: 240ms; }
+.detail-grid > :nth-child(2) { animation-delay: 280ms; }
+.detail-grid > :nth-child(3) { animation-delay: 320ms; }
+/* 한 열로 길어지는 좁은 화면: 카드가 화면에 들어오는 동안 페이드업(스크롤 연동 지원 브라우저만) */
+@media (max-width: 899.98px) {
+  @supports (animation-timeline: view()) {
+    .detail-grid > *, .detail-grid > :nth-child(n) {
+      animation: fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0px entry 140px;
+    }
+  }
+}
