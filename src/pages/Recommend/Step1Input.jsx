@@ -95,8 +95,23 @@ function ResidencePicker({ value, districts, invalid, onPick }) {
 }
 
 /**
+ * 세부 업종 칸: 대분류를 바꾸거나 검색 결과로 넘어가도 칸은 그대로 두고, 높이는 안 내용을 따라 부드럽게 늘고 줄며 안 내용만 은은하게 바뀐다.
+ * 높이는 ResizeObserver로 잰 안쪽 높이를 바깥에 숫자로 넣어 transition(auto는 transition이 안 돼서).
+ */
+function SmoothHeight({ className, children }) {
+  const inner = useRef(null);
+  const [h, setH] = useState();
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setH(e.borderBoxSize[0].blockSize));
+    ro.observe(inner.current);
+    return () => ro.disconnect();
+  }, []);
+  return <div className="s1-subs-wrap" style={{ height: h }}><div ref={inner} className={className}>{children}</div></div>;
+}
+
+/**
  * 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) · 거주 구(⑧, 선택) 입력.
- * 카드 하나에 세 묶음 — 기본 정보(맨 아래에 거주 구) | 희망 업종 | 자격증(좁으면 위아래로 쌓는다).
+ * 카드 하나에 세 묶음 — 기본 정보(맨 아래에 거주 구) | 자격증 / 희망 업종(좁으면 기본 정보 → 업종 → 자격증으로 쌓는다).
  * 계산 버튼과 빈 칸 안내(needText)는 화면 아래 고정 바(Recommend)에 있다. 모바일만 안내를 카드 맨 아래에도 보여 준다
  */
 export default function Step1Input({ cond, setCond, errors = {}, ageBad, needText, masters, mastersError, onRetryMasters, districts }) {
@@ -249,43 +264,48 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                     onClick={() => setCond({ big: k, sub: cats[k][0].name, industry_code: cats[k][0].code })}
                   >{k}</button>
                 ))}
+                <label className="s1-tags s1-indsearch">
+                  <Icon name="search" size={18} />
+                  <input value={indQuery} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setIndQuery(e.target.value)} />
+                </label>
               </div>
-              <div className="s1-tags">
-                <input value={indQuery} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setIndQuery(e.target.value)} />
-              </div>
-              {indHits ? (
-                <div className="s1-subs">
-                  {indHits.length ? (
-                    <>
-                      <span>‘{iq}’ 검색 결과 {indHits.length}개</span>
-                      <div className="s1-chips" key={iq}>
-                        {indHits.map((i) => (
+              {indHits || big ? (
+                <SmoothHeight className="s1-subs">
+                  {indHits ? (
+                    <div className="s1-subs-in" key="q">
+                      {indHits.length ? (
+                        <>
+                          <span>‘{iq}’ 검색 결과 {indHits.length}개</span>
+                          <div className="s1-chips hits" key={iq}>
+                            {indHits.map((i) => (
+                              <button
+                                key={i.industry_code} type="button" className={`chip sub ${cond.industry_code === i.industry_code ? 'on' : ''}`}
+                                aria-pressed={cond.industry_code === i.industry_code}
+                                onClick={() => { setCond({ big: i.category, sub: i.name, industry_code: i.industry_code }); setIndQuery(''); }}
+                              >{i.name}</button>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <span>
+                          ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="s1-subs-in" key={big}>
+                      <span>{big} › 세부 업종</span>
+                      <div className="s1-chips">
+                        {cats[big].map((s) => (
                           <button
-                            key={i.industry_code} type="button" className={`chip sub ${cond.industry_code === i.industry_code ? 'on' : ''}`}
-                            aria-pressed={cond.industry_code === i.industry_code}
-                            onClick={() => { setCond({ big: i.category, sub: i.name, industry_code: i.industry_code }); setIndQuery(''); }}
-                          >{i.name}</button>
+                            key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
+                            aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
+                          >{s.name}</button>
                         ))}
                       </div>
-                    </>
-                  ) : (
-                    <span>
-                      ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
-                    </span>
+                    </div>
                   )}
-                </div>
-              ) : big ? (
-                <div className="s1-subs">
-                  <span>{big} › 세부 업종</span>
-                  <div className="s1-chips" key={big}>
-                    {cats[big].map((s) => (
-                      <button
-                        key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
-                        aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
-                      >{s.name}</button>
-                    ))}
-                  </div>
-                </div>
+                </SmoothHeight>
               ) : <span className="hint">대분류를 고르면 세부 업종이 보여요</span>}
             </>
           )}
