@@ -87,6 +87,10 @@ button, a {
   -webkit-tap-highlight-color: transparent;
 }
 button:active, a:active { transform: scale(.98); }
+/* 누르는 UI(버튼 · 링크 · 칩 · 헤더 · 탭 바)는 끌어도 글자가 파랗게 잡히거나 링크 · 이미지가 끌려 나오지 않게. 본문 숫자 · 주소는 그대로 복사 가능 */
+button, a, label, [role="button"], header, nav { -webkit-user-select: none; user-select: none; }
+input, textarea { -webkit-user-select: text; user-select: text; } /* label이 입력칸을 감싸므로 — iOS는 물려받으면 입력이 막힌다 */
+a, img, svg { -webkit-user-drag: none; }
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 main[tabindex="-1"]:focus { outline: none; } /* '맨 위로' 뒤 본문으로 옮긴 포커스는 테두리 없이 */
 @media (hover: hover) {
