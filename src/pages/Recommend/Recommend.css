@@ -131,7 +131,7 @@
 /* 카드 하나: 머리 아래 세 묶음(.s1-grid) — 넓으면(1040px~) 왼쪽 기본 정보 / 자격증 | 오른쪽 희망 업종,
    좁으면 같은 순서로 위아래로 쌓는다. 칸 사이는 구분선. 계산 버튼은 하단 바 */
 .s1-form { min-width: 0; padding: clamp(20px, 3%, 40px); display: flex; flex-direction: column; gap: 24px; }
-/* 들어올 때 머리 → 네 칸이 차례로 페이드업(대시보드 히어로와 같은 70ms 간격) */
+/* 들어올 때 머리 → 세 묶음이 차례로 페이드업(대시보드 히어로와 같은 70ms 간격) */
 .s1-form > .page-head, .s1-grid > * { animation: fade-up .5s var(--ease-out) backwards; }
 .s1-grid > :nth-child(1) { animation-delay: 70ms; }
 .s1-grid > :nth-child(2) { animation-delay: 140ms; }

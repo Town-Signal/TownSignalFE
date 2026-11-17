@@ -343,15 +343,6 @@ function SkRow({ rank = false }) {
 /** 선택한 동 카드(10.4 5): ⑫ 예측 · 업종 분포 수준. 점포 데이터가 없으면 가까운 동네 안내 */
 function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
   const back = <button type="button" className="round-btn bordered" aria-label="목록으로" onClick={onBack}>‹</button>;
-  const cta = (
-    // 사이드바(모바일은 시트) 맨 아래에 고정 — 다른 화면 하단 바처럼 [이전](목록으로) + [상세 분석 보기]
-    <div className="search-cta">
-      <button type="button" className="btn-ghost rec-bar-back" aria-label="목록으로" onClick={onBack}><BackIcon />이전</button>
-      <Link to={detailPath(x.dong_code, { industryCode: industry?.industry_code, from: 'search' })} className="btn-primary rec-cta">
-        <span className="t">상세 분석 보기</span><Icon name="arrowRight" size={18} />
-      </Link>
-    </div>
-  );
   if (pred.error) {
     return (
       <div className="search-none">
@@ -362,7 +353,7 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
   }
   const p = pred.data;
   if (!p && !pred.loading) return null;
-  if (p?.store_count_latest == null && p) {
+  if (p && p.store_count_latest == null) {
     return (
       <div className="search-none">
         {back}
@@ -430,7 +421,13 @@ function Picked({ x, pred, industry, rank, near, fav, onFav, onBack, onPick }) {
         </div>
       )}
       <p className="note">예측은 참고용이에요. 최종 판단과 책임은 사용자에게 있어요.</p>
-      {cta}
+      {/* 사이드바(모바일은 시트) 맨 아래에 고정 — 다른 화면 하단 바처럼 [이전](목록으로) + [상세 분석 보기] */}
+      <div className="search-cta">
+        <button type="button" className="btn-ghost rec-bar-back" aria-label="목록으로" onClick={onBack}><BackIcon />이전</button>
+        <Link to={detailPath(x.dong_code, { industryCode: industry?.industry_code, from: 'search' })} className="btn-primary rec-cta">
+          <span className="t">상세 분석 보기</span><Icon name="arrowRight" size={18} />
+        </Link>
+      </div>
     </div>
   );
 }
