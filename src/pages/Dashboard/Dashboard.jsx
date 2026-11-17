@@ -98,12 +98,35 @@ function RotatingHeadline({ id }) {
 }
 
 /** 히어로 숫자 칩 — 값이 아직 없으면(불러오는 중) 숫자 자리에 막대 */
+/** 숫자가 지금 값에서 목표까지 올라간다(.8초, 끝에서 느려짐 — 처음엔 0부터). 동작 줄이기면 바로 목표값 */
+function CountUp({ to }) {
+  const reduce = useMediaQuery(REDUCED_MOTION);
+  const [n, setN] = useState(reduce ? to : 0);
+  const cur = useRef(n);
+  useEffect(() => {
+    if (reduce) { cur.current = to; setN(to); return undefined; }
+    const from = cur.current;
+    const start = performance.now();
+    let raf;
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / 800);
+      cur.current = Math.round(from + (to - from) * (1 - (1 - p) ** 3));
+      setN(cur.current);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to, reduce]);
+  return n;
+}
+
 function HeroStat({ href, label, value, unit }) {
   return (
     <li>
       <a href={href}>
         <span>{label}</span>
-        <b>{value == null ? <Sk w="2.4em" h="1em" className="on-dark" /> : <span className="fade-in">{value}<small>{unit}</small></span>}</b>
+        <b>{value == null ? <Sk w="2.4em" h="1em" className="on-dark" />
+          : <span className="fade-in">{typeof value === 'number' ? <CountUp to={value} /> : value}<small>{unit}</small></span>}</b>
       </a>
     </li>
   );

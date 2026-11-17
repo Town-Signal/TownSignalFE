@@ -148,7 +148,7 @@
 }
 /* 라벨만(a의 바로 아래 span) — 숫자도 <b> 안 span(fade-in)이라 `.hero-stats span`으로 쓰면 숫자까지 12px로 줄어든다 */
 .hero-stats a > span { font-size: 12px; line-height: 1.35; color: oklch(1 0 0 / 0.8); word-break: keep-all; }
-.hero-stats b { font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+.hero-stats b { font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; font-variant-numeric: tabular-nums; } /* 숫자가 올라가는 동안 폭이 흔들리지 않게 */
 .hero-stats small { margin-left: 2px; font-size: 13px; font-weight: 600; color: oklch(1 0 0 / 0.8); }
 @media (hover: hover) {
   .hero-stats a:hover { color: #fff; background: oklch(0.25 0.08 262 / 0.45); transform: translateY(-2px); }
