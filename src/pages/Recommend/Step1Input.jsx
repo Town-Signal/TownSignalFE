@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../../lib/format';
-import { BoxMsg, Sk } from '../../components/ui';
+import { BoxMsg, Icon, Sk } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
+import { usePresence } from '../../hooks/usePresence';
 
 const digits = (v, max) => v.replace(/\D/g, '').slice(0, max);
 // 경력은 만 15세부터 쌓을 수 있다고 본다
 const careerMax = (age) => { const n = parseInt(age, 10); return n >= 15 ? n - 15 : n > 0 ? 0 : 80; };
 const TAG_OUT_MS = 190;
+const RESID_OUT_MS = 200; // 거주 구 드롭다운이 위로 접히며 사라지는 시간(.resid-pop.leaving과 같게)
 
 function capitalInKorean(cap) {
   if (!cap) return '만원 단위로 입력해 주세요';
@@ -40,6 +42,55 @@ function NumInput({ value, ...props }) {
         {slots.map((s) => <span key={s.k} className={s.d ? `in-${s.d}` : undefined}>{s.c}</span>)}
       </span>
     </span>
+  );
+}
+
+/**
+ * 거주 구(⑧) 고르기: 입력 칸 모양 버튼 → 아래에 뜨는 25개 구 5열 격자(스크롤 없이 한 번에). 직접찾기 업종 고르기(IndustryPicker)와 같은 방식 —
+ * 바깥을 누르거나 Esc면 닫히고, 고르면 닫히며 버튼으로 포커스가 돌아온다
+ */
+function ResidencePicker({ value, districts, invalid, onPick }) {
+  const [open, setOpen] = useState(false);
+  const [shown, leaving] = usePresence(open || null, RESID_OUT_MS); // 닫힌 뒤에도 접혀 올라가는 동안 그린다
+  const box = useRef(null);
+  const btn = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    // 화면 아래쪽에서 열면 하단 고정 바(계산 버튼)에 가리지 않게 올려 준다 — 여유는 .resid-pop의 scroll-margin-bottom
+    box.current?.querySelector('.resid-pop')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  // 목록을 받기 전 · 못 받았을 때도 저장된 값이 '선택 안 함'으로 보이지 않게
+  const name = value ? (districts?.find((d) => d.district_code === value)?.name ?? '선택한 구') : null;
+  const pick = (code) => { onPick(code); setOpen(false); btn.current?.focus(); };
+  return (
+    <div className="resid-pick" ref={box} onKeyDown={(e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); btn.current?.focus(); } }}>
+      <button ref={btn} type="button" className={`s1-input resid-btn ${open ? 'open' : ''} ${invalid ? 'invalid' : ''}`}
+        aria-labelledby="resid-label" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className={name ? 'v' : 'v none'}>{name ?? '선택 안 함'}</span>
+        <Icon name="chevronDown" size={16} />
+      </button>
+      {shown && (
+        <div className={`resid-pop ${leaving ? 'leaving' : ''}`}>
+          <div className="resid-head">
+            <span>사는 구를 골라 주세요</span>
+            {value && <button type="button" className="resid-clear" onClick={() => pick(null)}>선택 안 함</button>}
+          </div>
+          {districts?.length
+            ? (
+              <div className="resid-grid">
+                {districts.map((d) => (
+                  <button key={d.district_code} type="button" className={`chip sub ${value === d.district_code ? 'on' : ''}`}
+                    aria-pressed={value === d.district_code} onClick={() => pick(d.district_code)}>{d.name}</button>
+                ))}
+              </div>
+            )
+            : <span className="resid-none">구 목록을 불러오지 못했어요. 잠시 후 다시 열어 주세요.</span>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -140,20 +191,13 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                 : <span className={`hint ${areaN > 0 ? '' : 'error'}`}>{areaN > 0 ? `약 ${Math.round((areaN / 3.3058) * 10) / 10}평` : '㎡ 단위로 입력해 주세요'}</span>}
             </label>
 
-            <label className="s1-field resid">
-              <span className="label">거주 구 <span className="opt">선택</span></span>
-              <div className={`s1-input s1-select ${errors.residence ? 'invalid' : ''}`}>
-                <select value={residence ?? ''} onChange={(e) => setCond({ residence: e.target.value || null })}>
-                  <option value="">선택 안 함</option>
-                  {/* 목록을 받기 전 · 못 받았을 때도 저장된 값이 '선택 안 함'으로 보이지 않게 */}
-                  {residence && !districts?.some((d) => d.district_code === residence) && <option value={residence}>선택한 구</option>}
-                  {districts?.map((d) => <option key={d.district_code} value={d.district_code}>{d.name}</option>)}
-                </select>
-              </div>
+            <div className="s1-field resid">
+              <span className="label" id="resid-label">거주 구 <span className="opt">선택</span></span>
+              <ResidencePicker value={residence} districts={districts} invalid={!!errors.residence} onPick={(code) => setCond({ residence: code })} />
               {errors.residence
                 ? <span className="hint error server" role="alert">{errors.residence}</span>
                 : <span className="hint">일부 구청 지원사업은 그 구에 사는 청년만 신청할 수 있어요. 고르면 계산에 반영해요.</span>}
-            </label>
+            </div>
           </div>
         </section>
 
