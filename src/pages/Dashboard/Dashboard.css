@@ -54,8 +54,8 @@
 .hero-spark.small { right: 22px; top: 20px; opacity: .24; }
 /* 별: 대각선 방향으로 아주 천천히 떠다닌다. 왕복이 아니라 고르지 않은 여러 지점을 도는 긴 주기(40초 · 31초)라
    같은 장면이 잘 반복되지 않고, 거리도 작다(큰 별 20px 남짓 · 작은 별 10px 안). 반짝임도 느리고 약하게 */
-.hero-spark.big { animation: spark-drift-big 40s ease-in-out infinite; }
-.hero-spark.small { animation: spark-drift-small 31s ease-in-out infinite, twinkle 7.3s ease-in-out infinite; }
+.hero-spark.big { animation: spark-drift-big 40s ease-in-out infinite, star-spin 120s linear infinite; }
+.hero-spark.small { animation: spark-drift-small 31s ease-in-out infinite, twinkle 7.3s ease-in-out infinite, star-spin 48s linear infinite; }
 @keyframes spark-drift-big {
   0%, 100% { transform: translate(0, 0) rotate(-12deg); }
   27% { transform: translate(-14px, -10px) rotate(-9deg); }
@@ -68,14 +68,16 @@
   61% { transform: translate(-10px, 7px) rotate(9deg); }
   84% { transform: translate(-3px, 3px) rotate(3deg); }
 }
+/* 천천히 한 바퀴 — 개별 rotate 속성이라 떠다니는 transform(drift)과 겹쳐 돈다 */
+@keyframes star-spin { to { rotate: 360deg; } }
 @keyframes twinkle { 0%, 100% { opacity: .28; } 38% { opacity: .42; } 55% { opacity: .35; } 72% { opacity: .45; } } /* 후광이 보이도록 작은 별만 조금 밝게 */
 /* 작은 별 세 개에 은은한 후광(가까운 흰빛 + 넓게 퍼지는 하늘빛) — 반짝임(opacity)과 함께 밝아졌다 어두워진다.
    큰 별(.big)은 바탕 무늬라 빼고, 별이 작아 filter 비용은 적다 */
 .hero-spark:is(.small, .tiny) { filter: drop-shadow(0 0 4px oklch(1 0 0 / 0.9)) drop-shadow(0 0 12px oklch(0.88 0.09 210 / 0.8)); }
 /* 작은 별 두 개 더 — 오른쪽 가운데 · 아래쪽, 반짝임 주기를 서로 다르게 */
 .hero-spark.tiny { opacity: .22; }
-.hero-spark.t1 { right: 30%; top: 22%; animation: spark-drift-small 27s ease-in-out -9s infinite, twinkle 5.9s ease-in-out -2s infinite; }
-.hero-spark.t2 { right: 14%; bottom: 18%; animation: spark-drift-small 35s ease-in-out -17s infinite reverse, twinkle 8.1s ease-in-out -5s infinite; }
+.hero-spark.t1 { right: 30%; top: 22%; animation: spark-drift-small 27s ease-in-out -9s infinite, twinkle 5.9s ease-in-out -2s infinite, star-spin 40s linear -11s infinite; }
+.hero-spark.t2 { right: 14%; bottom: 18%; animation: spark-drift-small 35s ease-in-out -17s infinite reverse, twinkle 8.1s ease-in-out -5s infinite, star-spin 60s linear -23s infinite reverse; }
 
 /* 빛 알갱이 — 나타나며 위로 천천히 떠올랐다가 사라진다. 시작 위치(음수 delay)를 제각각 줘 처음부터 고르게 흩어져 있다.
    동작 줄이기면 global 규칙이 애니메이션을 끄고, 기본 opacity 0이라 보이지 않는다 */
