@@ -491,6 +491,8 @@ body:has(.page.dash, .page.rec, .page.detail, .page.cmp) .site-footer-inner { ma
 
 .empty { padding: 36px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
 .empty .icon { width: 56px; height: 56px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; }
+/* 관심(하트) 빈 화면 — 대시보드 관심 칸(.sec-ico.rose)과 같은 장밋빛 둥근 사각형 */
+.empty .icon.rose { border-radius: 16px; background: var(--rose-soft); color: var(--heart); }
 .empty .title { font-size: 17px; font-weight: 700; }
 .empty .desc { font-size: 13px; line-height: 1.6; color: var(--muted); }
 .empty .actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }

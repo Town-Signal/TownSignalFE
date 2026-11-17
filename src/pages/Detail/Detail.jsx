@@ -202,17 +202,17 @@ function DongDetail({ code }) {
         </div>
       </main>
 
-      {/* 하단 바(추천받기와 같은 모양): 데스크톱은 왼쪽 안내 | [이전] + [관심 상권과 비교하기], 모바일은 탭바 위 비교 버튼만(이전은 상단 ‹).
+      {/* 하단 바(추천받기와 같은 모양): 데스크톱은 왼쪽 안내 | [이전] + [관심 등록한 창업지와 비교하기], 모바일은 탭바 위 비교 버튼만(이전은 상단 ‹).
           [이전]은 추천에서 왔으면 3단계(고른 동 그대로)로 — 예전 '다른 추천 동네 보기'와 같은 곳이라 하나로 합쳤다 */}
       <div className="rec-bar">
         <div className="rec-bar-in">
           <div className="rec-bar-left desk-only">
-            <p className="detail-bar-text"><b>{d.dong_name}</b>, 다른 곳과도 견줘볼까요? <span>관심 상권과 나란히 놓고 비교해요</span></p>
+            <p className="detail-bar-text"><b>{d.dong_name}</b>, 다른 곳과도 견줘볼까요? <span>관심 등록한 창업지와 나란히 놓고 비교해요</span></p>
           </div>
           <div className="rec-bar-act">
             <button type="button" className="btn-ghost rec-bar-back desk-only" aria-label="뒤로가기" onClick={back}><BackIcon />이전</button>
             <Link to={`/compare?dongs=${code}${industryCode ? `&industry_code=${industryCode}` : ''}`} className="btn-primary rec-cta">
-              <span className="t">관심 상권과 비교하기</span><Icon name="arrowRight" size={18} />
+              <span className="t">관심 등록한 창업지와 비교하기</span><Icon name="arrowRight" size={18} />
             </Link>
           </div>
         </div>

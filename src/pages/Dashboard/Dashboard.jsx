@@ -376,7 +376,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <ul className="hero-stats">
-                  <HeroStat href="#dash-favs" label="관심 창업지" value={favs.length} unit="곳" />
+                  <HeroStat href="#dash-favs" label="관심 등록한 창업지" value={favs.length} unit="곳" />
                   {/* 공고를 못 받아도 칩은 남겨 둔다(관심 칩 하나만 넓게 늘어나지 않게) — 값만 '—' */}
                   <HeroStat href="#dash-notices" label="모집 중 공고" value={notices.error ? '—' : openCount} unit={notices.error ? '' : '건'} />
                   <HeroStat href="#dash-notices" label={`${URGENT_DAYS}일 내 마감`} value={notices.error ? '—' : urgentCount} unit={notices.error ? '' : '건'} />
@@ -442,7 +442,7 @@ export default function Dashboard() {
       {undoToast && (
         <Toast
           key={`${undoToast.code}-${undoToast.at}`} leaving={undoLeaving}
-          message={`${undoToast.name}을(를) 관심 목록에서 뺐어요`} actionLabel="되돌리기" onAction={restore}
+          message={`${undoToast.name}을(를) 관심 등록한 창업지에서 뺐어요`} actionLabel="되돌리기" onAction={restore}
         />
       )}
     </>

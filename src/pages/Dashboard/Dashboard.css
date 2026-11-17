@@ -68,7 +68,10 @@
   61% { transform: translate(-10px, 7px) rotate(9deg); }
   84% { transform: translate(-3px, 3px) rotate(3deg); }
 }
-@keyframes twinkle { 0%, 100% { opacity: .2; } 38% { opacity: .3; } 55% { opacity: .26; } 72% { opacity: .32; } }
+@keyframes twinkle { 0%, 100% { opacity: .28; } 38% { opacity: .42; } 55% { opacity: .35; } 72% { opacity: .45; } } /* 후광이 보이도록 작은 별만 조금 밝게 */
+/* 작은 별 세 개에 은은한 후광(가까운 흰빛 + 넓게 퍼지는 하늘빛) — 반짝임(opacity)과 함께 밝아졌다 어두워진다.
+   큰 별(.big)은 바탕 무늬라 빼고, 별이 작아 filter 비용은 적다 */
+.hero-spark:is(.small, .tiny) { filter: drop-shadow(0 0 4px oklch(1 0 0 / 0.9)) drop-shadow(0 0 12px oklch(0.88 0.09 210 / 0.8)); }
 /* 작은 별 두 개 더 — 오른쪽 가운데 · 아래쪽, 반짝임 주기를 서로 다르게 */
 .hero-spark.tiny { opacity: .22; }
 .hero-spark.t1 { right: 30%; top: 22%; animation: spark-drift-small 27s ease-in-out -9s infinite, twinkle 5.9s ease-in-out -2s infinite; }

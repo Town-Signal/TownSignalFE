@@ -11,7 +11,7 @@ import { useApiError } from '../../hooks/useApiError';
 import { useDongNames } from '../../hooks/useDongNames';
 import { useIndustries } from '../../hooks/useIndustries';
 import { MobileHeader } from '../../components/Layout';
-import { BoxMsg, Sk } from '../../components/ui';
+import { BoxMsg, Icon, Sk } from '../../components/ui';
 import './Compare.css';
 
 const MAX = 4;
@@ -134,17 +134,17 @@ export default function Compare() {
 
   return (
     <>
-      <MobileHeader title="후보지 비교" />
+      <MobileHeader title="창업지 비교" />
       <main className="page cmp">
         <div className="page-head">
-          <h1 className="page-title">관심 후보지 비교</h1>
-          <p className="page-sub">관심 등록한 곳 중 최대 {MAX}곳을 골라 나란히 봐요.</p>
+          <h1 className="page-title">관심 등록한 창업지 비교</h1>
+          <p className="page-sub">관심 등록한 창업지 중 최대 {MAX}곳을 골라 나란히 봐요.</p>
         </div>
 
         {candidates.length === 0 ? (
           <div className="card empty">
-            <div className="icon">♡</div>
-            <div className="title">비교할 관심 동네가 없어요</div>
+            <div className="icon rose"><Icon name="heart" size={26} /></div>
+            <div className="title">관심 등록한 창업지가 없어요</div>
             <div className="desc">추천 결과나 검색에서 ♡를 눌러 1곳 이상 등록해 주세요.</div>
             <div className="actions">
               <Link to="/recommend" className="btn-primary">조건으로 추천받기</Link>
@@ -175,7 +175,7 @@ export default function Compare() {
               <p className="cmp-base">
                 <b>{industries ? industryName(baseIndustry) : <Sk w={64} h={14} />}</b> 기준으로 비교해요
                 <span className="mob-only"> · {sel.length}/{MAX} 선택</span>
-                {candidates.some(isOff) && ' · 업종이 다른 후보지는 함께 고를 수 없어요'}
+                {candidates.some(isOff) && ' · 업종이 다른 창업지는 함께 고를 수 없어요'}
               </p>
             )}
             {sameGu && (
@@ -188,7 +188,7 @@ export default function Compare() {
             {!sel.length ? (
               <div className="card empty">
                 <b className="title">비교할 동네를 골라 주세요</b>
-                <span className="desc">같은 업종의 후보지를 2곳 이상 고르면 나란히 비교해 드려요</span>
+                <span className="desc">같은 업종의 창업지를 2곳 이상 고르면 나란히 비교해 드려요</span>
               </div>
             ) : cmp.error ? (
               <div className="card">
