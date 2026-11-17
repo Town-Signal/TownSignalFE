@@ -194,6 +194,8 @@
 .s1-field.resid .label { display: flex; align-items: center; gap: 6px; }
 .s1-field.resid .label .opt { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px; background: var(--gray-bg); color: var(--muted); }
 .s1-field.resid .hint { text-align: left; white-space: normal; word-break: keep-all; }
+.resid-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.resid-note { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .resid-pick { position: relative; }
 .resid-btn { width: 100%; background: #fff; text-align: left; justify-content: space-between; }
 .resid-btn .v { font-size: 15px; font-weight: 600; color: var(--ink); }

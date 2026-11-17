@@ -68,7 +68,7 @@ function ResidencePicker({ value, districts, invalid, onPick }) {
   return (
     <div className="resid-pick" ref={box} onKeyDown={(e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); btn.current?.focus(); } }}>
       <button ref={btn} type="button" className={`s1-input resid-btn ${open ? 'open' : ''} ${invalid ? 'invalid' : ''}`}
-        aria-labelledby="resid-label" aria-expanded={open} onClick={() => setOpen(!open)}>
+        aria-labelledby="resid-label" aria-describedby="resid-note" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className={name ? 'v' : 'v none'}>{name ?? '선택 안 함'}</span>
         <Icon name="chevronDown" size={16} />
       </button>
@@ -192,11 +192,13 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
             </label>
 
             <div className="s1-field resid">
-              <span className="label" id="resid-label">거주 구 <span className="opt">선택</span></span>
+              {/* 안내는 제목 줄 오른쪽에 — 칸 아래 한 줄을 아껴 1단계 높이를 줄인다 */}
+              <div className="resid-top">
+                <span className="label" id="resid-label">거주 구 <span className="opt">선택</span></span>
+                <span className="resid-note" id="resid-note">구청 지원사업의 거주 조건에 써요</span>
+              </div>
               <ResidencePicker value={residence} districts={districts} invalid={!!errors.residence} onPick={(code) => setCond({ residence: code })} />
-              {errors.residence
-                ? <span className="hint error server" role="alert">{errors.residence}</span>
-                : <span className="hint">일부 구청 지원사업은 그 구에 사는 청년만 신청할 수 있어요. 고르면 계산에 반영해요.</span>}
+              {errors.residence && <span className="hint error server" role="alert">{errors.residence}</span>}
             </div>
           </div>
         </section>

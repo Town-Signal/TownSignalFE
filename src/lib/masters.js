@@ -13,7 +13,7 @@ export function loadMasters() {
 
 let districtsPromise = null;
 
-/** ⑧ 자치구 목록 [{ district_code, name }] — 1단계 '거주 구' 선택 칸용. ⑩ · ⑰과 따로 받아, 실패해도 1단계를 막지 않는다 */
+/** ⑧ 자치구 목록 [{ district_code, name }] — 1단계 '거주 구' 선택 칸 · lib/dongNames가 같이 쓴다. ⑩ · ⑰과 따로 받아, 실패해도 1단계를 막지 않는다 */
 export function loadDistricts() {
   districtsPromise ??= api('/regions/districts')
     .then((json) => json.data.items)
