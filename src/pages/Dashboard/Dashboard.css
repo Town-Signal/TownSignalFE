@@ -7,14 +7,16 @@
 /* ───── 히어로 띠: 헤더 바로 아래 화면 끝까지. 진한 파랑 + 구석 민트 빛, 흰 글자 ───── */
 .dash-hero {
   position: relative; overflow: hidden; isolation: isolate; container-type: inline-size;
-  background: var(--hero-bg); background-size: 260% 260%; color: #fff;
-  /* 바탕이 아주 천천히 흐른다(24초 왕복) */
-  animation: fade-in .5s ease both, hero-flow 24s ease-in-out infinite alternate;
+  /* 맨 위 입자 층은 160px 타일로 고정, 아래 메시 층(--hero-bg 4겹)은 넓게 깔아 천천히 흐른다(28초 왕복) */
+  background: var(--hero-grain), var(--hero-bg);
+  background-size: 160px 160px, 180% 180%, 180% 180%, 180% 180%, 180% 180%;
+  color: #fff;
+  animation: fade-in .5s ease both, hero-flow 28s ease-in-out infinite alternate;
 }
 @keyframes hero-flow {
-  0% { background-position: 0% 40%; }
-  50% { background-position: 55% 70%; }
-  100% { background-position: 100% 30%; }
+  0% { background-position: 0 0, 0% 30%, 0% 30%, 0% 30%, 0% 30%; }
+  50% { background-position: 0 0, 50% 65%, 50% 65%, 50% 65%, 50% 65%; }
+  100% { background-position: 0 0, 100% 35%, 100% 35%, 100% 35%, 100% 35%; }
 }
 /* 떠다니는 빛 두 덩어리 — 서로 다른 속도 · 경로로 오른쪽 영역만 돈다(왼쪽 흰 글자 밑으로는 오지 않게).
    transform만 움직여 가볍다. 동작 줄이기 설정이면 global 규칙이 멈춘다 */
@@ -25,13 +27,14 @@
 /* 민트: 오른쪽 위 */
 .dash-hero::before {
   width: 46%; right: -14%; top: -58%;
-  background: radial-gradient(closest-side, oklch(0.8 0.12 178 / 0.42), transparent);
+  /* 빛 가장자리는 단계를 둬 천천히 꺼지게(두 점 그라데이션은 원 테두리가 보인다) */
+  background: radial-gradient(closest-side, oklch(0.8 0.12 178 / 0.42), oklch(0.8 0.12 178 / 0.22) 40%, oklch(0.8 0.12 178 / 0.07) 70%, transparent);
   animation: glow-a 17s ease-in-out infinite alternate;
 }
 /* 하늘: 오른쪽 아래 */
 .dash-hero::after {
   width: 40%; right: 10%; bottom: -70%;
-  background: radial-gradient(closest-side, oklch(0.72 0.13 220 / 0.38), transparent);
+  background: radial-gradient(closest-side, oklch(0.72 0.13 220 / 0.38), oklch(0.72 0.13 220 / 0.2) 40%, oklch(0.72 0.13 220 / 0.06) 70%, transparent);
   animation: glow-b 21s ease-in-out infinite alternate;
 }
 @keyframes glow-a {
@@ -66,6 +69,29 @@
   84% { transform: translate(-3px, 3px) rotate(3deg); }
 }
 @keyframes twinkle { 0%, 100% { opacity: .2; } 38% { opacity: .3; } 55% { opacity: .26; } 72% { opacity: .32; } }
+/* 작은 별 두 개 더 — 오른쪽 가운데 · 아래쪽, 반짝임 주기를 서로 다르게 */
+.hero-spark.tiny { opacity: .22; }
+.hero-spark.t1 { right: 30%; top: 22%; animation: spark-drift-small 27s ease-in-out -9s infinite, twinkle 5.9s ease-in-out -2s infinite; }
+.hero-spark.t2 { right: 14%; bottom: 18%; animation: spark-drift-small 35s ease-in-out -17s infinite reverse, twinkle 8.1s ease-in-out -5s infinite; }
+
+/* 빛 알갱이 — 나타나며 위로 천천히 떠올랐다가 사라진다. 시작 위치(음수 delay)를 제각각 줘 처음부터 고르게 흩어져 있다.
+   동작 줄이기면 global 규칙이 애니메이션을 끄고, 기본 opacity 0이라 보이지 않는다 */
+.hero-dots { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero-dots i {
+  position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%;
+  background: #fff; box-shadow: 0 0 calc(var(--s) * 3) oklch(0.95 0.06 200 / 0.7); opacity: 0;
+  animation: dot-rise var(--d) ease-in-out var(--at) infinite;
+}
+@keyframes dot-rise {
+  0% { opacity: 0; transform: translate(0, 10px) scale(.6); }
+  25% { opacity: .6; }
+  70% { opacity: .45; }
+  100% { opacity: 0; transform: translate(-12px, -46px) scale(1); }
+}
+/* 좁은 띠(모바일)는 글자가 폭 전체라 알갱이를 절반만 */
+@container (max-width: 699px) {
+  .hero-dots i:nth-child(even) { display: none; }
+}
 .dash-hero :focus-visible { outline-color: #fff; }
 
 /* 안쪽 내용은 아래 카드들과 같은 폭 · 여백(1440px, --gutter)에 맞춘다 */
@@ -120,7 +146,8 @@
   color: #fff; background: oklch(0.25 0.08 262 / 0.3); box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.16);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.hero-stats span { font-size: 12px; line-height: 1.35; color: oklch(1 0 0 / 0.8); word-break: keep-all; }
+/* 라벨만(a의 바로 아래 span) — 숫자도 <b> 안 span(fade-in)이라 `.hero-stats span`으로 쓰면 숫자까지 12px로 줄어든다 */
+.hero-stats a > span { font-size: 12px; line-height: 1.35; color: oklch(1 0 0 / 0.8); word-break: keep-all; }
 .hero-stats b { font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
 .hero-stats small { margin-left: 2px; font-size: 13px; font-weight: 600; color: oklch(1 0 0 / 0.8); }
 @media (hover: hover) {
@@ -234,7 +261,7 @@
   .res-main .hero-actions > * { flex: 1 1 0; padding: 0 14px; }
   .res-main .hero-ghost .long { display: none; }
   .hero-stats a { padding: 10px 12px; }
-  .hero-stats span { font-size: 11px; }
+  .hero-stats a > span { font-size: 11px; }
   .hero-stats b { font-size: 20px; }
   /* 지표 4개는 2×2(왼쪽 칸은 구분선 없이) */
   .res-stats { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }

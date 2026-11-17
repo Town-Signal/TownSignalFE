@@ -24,6 +24,15 @@ const CLOSED_PREVIEW = 3; // 마감 묶음은 처음에 이만큼만 보이고 '
 const GU_TOTAL = 25;
 const RING_R = 32;
 const RING_C = 2 * Math.PI * RING_R;
+// 히어로 빛 알갱이 [left %, top %, 지름 px, 한 바퀴 초, 시작 위치 초] — 글자가 없는 오른쪽에 몰아 두고,
+// 주기 · 시작을 제각각 줘 같은 장면이 반복돼 보이지 않게(그리기용 고정값)
+const PARTICLES = [
+  [48, 70, 3, 13, 2], [54, 30, 2, 17, 9], [58, 82, 4, 15, 5], [62, 18, 2, 19, 12],
+  [66, 55, 3, 14, 1], [71, 88, 2, 18, 7], [74, 36, 4, 16, 11], [79, 64, 2, 13, 4],
+  [83, 22, 3, 20, 14], [86, 76, 2, 15, 8], [90, 44, 3, 17, 3], [94, 12, 2, 14, 10],
+  [36, 92, 2, 18, 6], [97, 60, 3, 16, 13], [51, 48, 2, 16, 15], [69, 8, 3, 18, 3],
+  [77, 92, 3, 14, 9], [88, 58, 2, 19, 16], [57, 62, 2, 15, 12], [92, 86, 4, 17, 6],
+];
 
 /** 종합점수 링(0~100). 서버 점수를 비율로 그리기만 한다. 없으면 빈 링에 '—' */
 function ScoreRing({ score }) {
@@ -253,6 +262,13 @@ export default function Dashboard() {
         <section className={`dash-hero ${first ? 'is-result' : 'is-intro'}`} aria-labelledby="dash-hero-title">
           <Icon name="sparkle" filled size={180} className="hero-spark big" />
           <Icon name="sparkle" filled size={36} className="hero-spark small" />
+          <Icon name="sparkle" filled size={18} className="hero-spark tiny t1" />
+          <Icon name="sparkle" filled size={14} className="hero-spark tiny t2" />
+          <div className="hero-dots" aria-hidden="true">
+            {PARTICLES.map(([x, y, s, d, at]) => (
+              <i key={`${x}-${y}`} style={{ '--x': `${x}%`, '--y': `${y}%`, '--s': `${s}px`, '--d': `${d}s`, '--at': `-${at}s` }} />
+            ))}
+          </div>
           <div className="hero-inner">
             {first ? (
               <>

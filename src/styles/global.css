@@ -32,11 +32,17 @@
   --rose-soft: oklch(0.95 0.03 15);
   --grad-brand: linear-gradient(120deg, oklch(0.47 0.17 262), oklch(0.52 0.14 228));
   /* 히어로: 진한 파랑 바탕 + 구석에만 민트 · 하늘 빛(흰 글자는 파랑 위에 놓인다) */
-  /* 바탕은 진한 파랑 ↔ 남보라 사이를 천천히 흐르는 넓은 그라데이션(대시보드 띠가 background-position을 움직인다).
-     밝기는 L 0.36~0.47로 묶어 흰 글자 대비를 지킨다. 민트 · 하늘 빛은 띠의 ::before · ::after가 따로 떠다닌다 */
-  --hero-bg: linear-gradient(115deg,
-    oklch(0.36 0.15 268) 0%, oklch(0.44 0.17 258) 22%, oklch(0.4 0.16 276) 44%,
-    oklch(0.46 0.16 248) 66%, oklch(0.39 0.16 266) 84%, oklch(0.44 0.17 255) 100%);
+  /* 바탕은 진한 파랑 ↔ 남보라. 밝고 어두운 띠를 번갈아 놓으면 비스듬한 줄무늬가 보여서, 부드러운 바탕 하나 위에
+     넓은 빛 웅덩이 세 개(남보라 왼쪽 위 · 밝은 파랑 오른쪽 아래 · 파랑 위 가운데)를 겹친 메시로 — 가장자리는 단계를 둬 천천히 사라진다.
+     대시보드 띠가 background-position을 움직여 웅덩이가 함께 흐른다. 밝기는 L 0.35~0.52로 묶어 흰 글자 대비를 지킨다.
+     민트 · 하늘 빛은 띠의 ::before · ::after가 따로 떠다닌다 */
+  --hero-bg:
+    radial-gradient(55% 75% at 18% 22%, oklch(0.42 0.17 282 / 0.6), oklch(0.42 0.17 282 / 0.24) 45%, transparent 75%),
+    radial-gradient(50% 70% at 80% 88%, oklch(0.52 0.15 238 / 0.5), oklch(0.52 0.15 238 / 0.2) 45%, transparent 75%),
+    radial-gradient(45% 60% at 50% 8%, oklch(0.47 0.16 252 / 0.42), oklch(0.47 0.16 252 / 0.15) 50%, transparent 72%),
+    linear-gradient(118deg, oklch(0.35 0.14 268), oklch(0.41 0.17 260) 50%, oklch(0.44 0.16 250));
+  /* 어두운 그라데이션의 계단(밴딩)을 가리는 아주 옅은 입자 — 히어로 띠 맨 위 층 */
+  --hero-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
   --ease: cubic-bezier(.2, .7, .2, 1);
   /* 들어올 때는 빠르게 시작해 부드럽게 멈추고(out), 나갈 때는 천천히 시작해 빠르게 빠진다(in) */
