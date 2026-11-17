@@ -4,14 +4,16 @@ import { survivalView } from '../../lib/survival';
 
 const MANWON = 10000;
 
-/** 2단계 '입력한 조건' 칩 문구(하단 바 · 모바일 요약 띠 공용). 자본금은 ② 응답의 계산에 쓴 값(만 원) */
+/** 2단계 '입력한 조건' 칩 문구(하단 바 · 모바일 요약 띠 공용). 자본금은 ② 응답의 계산에 쓴 값(만 원). 거주 구는 골랐을 때만 */
 export const condChips = (cond, capital) => [
   `${cond.age}세`, `자본금 ${fmt(capital)}만 원`, areaText(cond.area),
   cond.career ? `경력 ${cond.career}년` : '경력 없음', cond.sub, `자격증 ${cond.tags.length}개`,
+  ...(cond.residence && cond.residenceName ? [`${cond.residenceName} 거주`] : []),
 ];
 
 /**
  * ② 요청 본문. 자본금 만 원 → 원 변환은 여기 한 곳에서만 한다(CLAUDE.md 7절).
+ * 거주 구는 '선택 안 함'이면 null로 보낸다.
  */
 export function toBudgetRequest(cond) {
   return {
@@ -21,6 +23,7 @@ export function toBudgetRequest(cond) {
     career_years: Number(cond.career) || 0,
     certificates: cond.tags,
     target_area_sqm: areaSqm(cond.area),
+    residence_district_code: cond.residence ?? null,
   };
 }
 

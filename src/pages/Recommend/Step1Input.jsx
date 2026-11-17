@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../../lib/format';
-import { BoxMsg, Sk } from '../../components/ui';
+import { BoxMsg, Icon, Sk } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
+import { usePresence } from '../../hooks/usePresence';
 
 const digits = (v, max) => v.replace(/\D/g, '').slice(0, max);
 // 경력은 만 15세부터 쌓을 수 있다고 본다
 const careerMax = (age) => { const n = parseInt(age, 10); return n >= 15 ? n - 15 : n > 0 ? 0 : 80; };
 const TAG_OUT_MS = 190;
+const RESID_OUT_MS = 200; // 거주 구 드롭다운이 위로 접히며 사라지는 시간(.resid-pop.leaving과 같게)
 
 function capitalInKorean(cap) {
   if (!cap) return '만원 단위로 입력해 주세요';
@@ -44,12 +46,76 @@ function NumInput({ value, ...props }) {
 }
 
 /**
- * 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) 입력.
- * 카드 하나에 세 묶음 — 기본 정보 | 희망 업종 | 자격증(좁으면 위아래로 쌓는다).
+ * 거주 구(⑧) 고르기: 입력 칸 모양 버튼 → 아래에 뜨는 25개 구 5열 격자(스크롤 없이 한 번에). 직접찾기 업종 고르기(IndustryPicker)와 같은 방식 —
+ * 바깥을 누르거나 Esc면 닫히고, 고르면 닫히며 버튼으로 포커스가 돌아온다
+ */
+function ResidencePicker({ value, districts, invalid, onPick }) {
+  const [open, setOpen] = useState(false);
+  const [shown, leaving] = usePresence(open || null, RESID_OUT_MS); // 닫힌 뒤에도 접혀 올라가는 동안 그린다
+  const box = useRef(null);
+  const btn = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    // 화면 아래쪽에서 열면 하단 고정 바(계산 버튼)에 가리지 않게 올려 준다 — 여유는 .resid-pop의 scroll-margin-bottom
+    box.current?.querySelector('.resid-pop')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  // 목록을 받기 전 · 못 받았을 때도 저장된 값이 '선택 안 함'으로 보이지 않게
+  const name = value ? (districts?.find((d) => d.district_code === value)?.name ?? '선택한 구') : null;
+  const pick = (code) => { onPick(code); setOpen(false); btn.current?.focus(); };
+  return (
+    <div className="resid-pick" ref={box} onKeyDown={(e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); btn.current?.focus(); } }}>
+      <button ref={btn} type="button" className={`s1-input resid-btn ${open ? 'open' : ''} ${invalid ? 'invalid' : ''}`}
+        aria-labelledby="resid-label" aria-describedby="resid-note" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className={name ? 'v' : 'v none'}>{name ?? '선택 안 함'}</span>
+        <Icon name="chevronDown" size={16} />
+      </button>
+      {shown && (
+        <div className={`resid-pop ${leaving ? 'leaving' : ''}`}>
+          <div className="resid-head">
+            <span>사는 구를 골라 주세요</span>
+            {value && <button type="button" className="resid-clear" onClick={() => pick(null)}>선택 안 함</button>}
+          </div>
+          {districts?.length
+            ? (
+              <div className="resid-grid">
+                {districts.map((d) => (
+                  <button key={d.district_code} type="button" className={`chip sub ${value === d.district_code ? 'on' : ''}`}
+                    aria-pressed={value === d.district_code} onClick={() => pick(d.district_code)}>{d.name}</button>
+                ))}
+              </div>
+            )
+            : <span className="resid-none">구 목록을 불러오지 못했어요. 잠시 후 다시 열어 주세요.</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 세부 업종 칸: 대분류를 바꾸거나 검색 결과로 넘어가도 칸은 그대로 두고, 높이는 안 내용을 따라 부드럽게 늘고 줄며 안 내용만 은은하게 바뀐다.
+ * 높이는 ResizeObserver로 잰 안쪽 높이를 바깥에 숫자로 넣어 transition(auto는 transition이 안 돼서).
+ */
+function SmoothHeight({ className, children }) {
+  const inner = useRef(null);
+  const [h, setH] = useState();
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setH(e.borderBoxSize[0].blockSize));
+    ro.observe(inner.current);
+    return () => ro.disconnect();
+  }, []);
+  return <div className="s1-subs-wrap" style={{ height: h }}><div ref={inner} className={className}>{children}</div></div>;
+}
+
+/**
+ * 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) · 거주 구(⑧, 선택) 입력.
+ * 카드 하나에 세 묶음 — 기본 정보(맨 아래에 거주 구) | 자격증 / 희망 업종(좁으면 기본 정보 → 업종 → 자격증으로 쌓는다).
  * 계산 버튼과 빈 칸 안내(needText)는 화면 아래 고정 바(Recommend)에 있다. 모바일만 안내를 카드 맨 아래에도 보여 준다
  */
-export default function Step1Input({ cond, setCond, errors = {}, ageBad, needText, masters, mastersError, onRetryMasters }) {
-  const { age, career, capital, area, tags } = cond;
+export default function Step1Input({ cond, setCond, errors = {}, ageBad, needText, masters, mastersError, onRetryMasters, districts }) {
+  const { age, career, capital, area, tags, residence } = cond;
   const cats = useMemo(() => (masters ? groupIndustries(masters.industries) : null), [masters]);
   const big = cats?.[cond.big] ? cond.big : null; // 빈 폼이면 대분류도 고르지 않은 상태
   const [query, setQuery] = useState('');
@@ -139,6 +205,16 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                 ? <span className="hint error server" role="alert">{errors.area}</span>
                 : <span className={`hint ${areaN > 0 ? '' : 'error'}`}>{areaN > 0 ? `약 ${Math.round((areaN / 3.3058) * 10) / 10}평` : '㎡ 단위로 입력해 주세요'}</span>}
             </label>
+
+            <div className="s1-field resid">
+              {/* 안내는 제목 줄 오른쪽에 — 칸 아래 한 줄을 아껴 1단계 높이를 줄인다 */}
+              <div className="resid-top">
+                <span className="label" id="resid-label">거주 구 <span className="opt">선택</span></span>
+                <span className="resid-note" id="resid-note">구청 지원사업의 거주 조건에 써요</span>
+              </div>
+              <ResidencePicker value={residence} districts={districts} invalid={!!errors.residence} onPick={(code) => setCond({ residence: code })} />
+              {errors.residence && <span className="hint error server" role="alert">{errors.residence}</span>}
+            </div>
           </div>
         </section>
 
@@ -188,43 +264,48 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                     onClick={() => setCond({ big: k, sub: cats[k][0].name, industry_code: cats[k][0].code })}
                   >{k}</button>
                 ))}
+                <label className="s1-tags s1-indsearch">
+                  <Icon name="search" size={18} />
+                  <input value={indQuery} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setIndQuery(e.target.value)} />
+                </label>
               </div>
-              <div className="s1-tags">
-                <input value={indQuery} placeholder="업종 이름으로 찾기 (예: 편의점)" aria-label="업종 검색" enterKeyHint="search" onChange={(e) => setIndQuery(e.target.value)} />
-              </div>
-              {indHits ? (
-                <div className="s1-subs">
-                  {indHits.length ? (
-                    <>
-                      <span>‘{iq}’ 검색 결과 {indHits.length}개</span>
-                      <div className="s1-chips" key={iq}>
-                        {indHits.map((i) => (
+              {indHits || big ? (
+                <SmoothHeight className="s1-subs">
+                  {indHits ? (
+                    <div className="s1-subs-in" key="q">
+                      {indHits.length ? (
+                        <>
+                          <span>‘{iq}’ 검색 결과 {indHits.length}개</span>
+                          <div className="s1-chips hits" key={iq}>
+                            {indHits.map((i) => (
+                              <button
+                                key={i.industry_code} type="button" className={`chip sub ${cond.industry_code === i.industry_code ? 'on' : ''}`}
+                                aria-pressed={cond.industry_code === i.industry_code}
+                                onClick={() => { setCond({ big: i.category, sub: i.name, industry_code: i.industry_code }); setIndQuery(''); }}
+                              >{i.name}</button>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <span>
+                          ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="s1-subs-in" key={big}>
+                      <span>{big} › 세부 업종</span>
+                      <div className="s1-chips">
+                        {cats[big].map((s) => (
                           <button
-                            key={i.industry_code} type="button" className={`chip sub ${cond.industry_code === i.industry_code ? 'on' : ''}`}
-                            aria-pressed={cond.industry_code === i.industry_code}
-                            onClick={() => { setCond({ big: i.category, sub: i.name, industry_code: i.industry_code }); setIndQuery(''); }}
-                          >{i.name}</button>
+                            key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
+                            aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
+                          >{s.name}</button>
                         ))}
                       </div>
-                    </>
-                  ) : (
-                    <span>
-                      ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
-                    </span>
+                    </div>
                   )}
-                </div>
-              ) : big ? (
-                <div className="s1-subs">
-                  <span>{big} › 세부 업종</span>
-                  <div className="s1-chips" key={big}>
-                    {cats[big].map((s) => (
-                      <button
-                        key={s.code} type="button" className={`chip sub ${cond.industry_code === s.code ? 'on' : ''}`}
-                        aria-pressed={cond.industry_code === s.code} onClick={() => setCond({ sub: s.name, industry_code: s.code })}
-                      >{s.name}</button>
-                    ))}
-                  </div>
-                </div>
+                </SmoothHeight>
               ) : <span className="hint">대분류를 고르면 세부 업종이 보여요</span>}
             </>
           )}

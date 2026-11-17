@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { DEFAULT_COND, useAppState } from '../../context/AppState';
 import { useToast } from '../../context/Toast';
 import { api } from '../../lib/api';
-import { findIndustry, hasSales, loadMasters } from '../../lib/masters';
+import { findIndustry, hasSales, loadDistricts, loadMasters } from '../../lib/masters';
 import { requestIdText } from '../../lib/format';
 import { detailPath } from '../../lib/paths';
 import { useApiError } from '../../hooks/useApiError';
@@ -24,7 +24,7 @@ const LOAD_DONE = 600;
 const LOAD_END = 1600; // ✓ '찾았어요'를 1초 보여 준 뒤 넘어간다
 const BAR_OUT_MS = 220; // 하단 바 항목이 사라지는 애니메이션 길이(Recommend.css bar-out)
 const TOP_K = 20; // 한 페이지 20개(판정 40)
-const FIELD_KEYS = { age: 'age', capital: 'capital', target_area_sqm: 'area', career_years: 'career', industry_code: 'sub', certificates: 'tags' };
+const FIELD_KEYS = { age: 'age', capital: 'capital', target_area_sqm: 'area', career_years: 'career', industry_code: 'sub', certificates: 'tags', residence_district_code: 'residence' };
 const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 // 받침이 있으면 '을', 없으면 '를'
 const objParticle = (w) => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? '을' : '를');
@@ -62,6 +62,7 @@ export default function Recommend() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [masters, setMasters] = useState(null); // { industries, certificates }
   const [mastersError, setMastersError] = useState(false);
+  const [districts, setDistricts] = useState(null); // ⑧ 자치구 목록(거주 구 선택 칸). 못 받으면 '선택 안 함'만 보인다
   const [budget, setBudget] = useState(kept?.budget ?? null); // ② data
   const [warnings, setWarnings] = useState(kept?.warnings ?? []); // ② warnings
   const [rec, setRec] = useState(kept?.rec ?? null); // ④ data
@@ -86,6 +87,11 @@ export default function Recommend() {
   }, [handleError]);
   useEffect(() => { fetchMasters(); }, [fetchMasters]);
   useEffect(() => {
+    let alive = true;
+    loadDistricts().then((items) => { if (alive) setDistricts(items); }).catch(() => {}); // 선택 항목이라 조용히 넘어간다
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
     const fix = masters && resolveIndustry(cond, masters.industries);
     if (fix) setCond(fix);
   }, [masters, cond, setCond]);
@@ -100,8 +106,10 @@ export default function Recommend() {
   const shownCond = useMemo(() => {
     if (!calcCond) return cond;
     const sub = calcCond.sub ?? findIndustry(masters?.industries, calcCond.industry_code)?.name ?? rec?.industry_name ?? cond.sub;
-    return { ...cond, ...calcCond, sub };
-  }, [calcCond, cond, masters, rec]);
+    // 거주 구 이름은 ② 응답의 자치구 목록에서 찾는다(25개 구가 다 있다)
+    const residenceName = budget?.district_budgets.find((d) => d.district_code === calcCond.residence)?.district_name ?? null;
+    return { ...cond, ...calcCond, sub, residenceName };
+  }, [calcCond, cond, masters, rec, budget]);
 
   const { capital, area, age } = cond;
   const ageN = parseInt(age, 10);
@@ -233,6 +241,7 @@ export default function Recommend() {
             ...(ic.target_area_sqm != null && { area: String(ic.target_area_sqm) }),
             ...(Array.isArray(ic.certificates) && { tags: ic.certificates }),
             ...(ic.industry_code && { industry_code: ic.industry_code, sub: null }),
+            residence: ic.residence_district_code ?? null, // 거주 구가 없던 옛 스냅샷은 '선택 안 함'
           });
         }
         if (step === 3) {
@@ -304,7 +313,7 @@ export default function Recommend() {
           {step === 1 && (
             <Step1Input
               cond={cond} setCond={editCond} errors={fieldErrors} ageBad={ageBad} needText={needText}
-              masters={masters} mastersError={mastersError} onRetryMasters={fetchMasters}
+              masters={masters} mastersError={mastersError} onRetryMasters={fetchMasters} districts={districts}
             />
           )}
           {step === 2 && guView && (

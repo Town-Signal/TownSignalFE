@@ -2,16 +2,13 @@
 // 업종을 모르는 동만 ⑫를 부를 수 없어서, 그때만 ⑧ 자치구 목록(한 번) + 필요한 구의 ⑨ 행정동 목록(구별로 한 번)으로 찾는다.
 // district_code = dong_code 앞 5자리.
 import { api } from './api';
+import { loadDistricts as loadDistrictList } from './masters';
 
-let districtsPromise = null;
 const dongsByDistrict = {};
 
-const loadDistricts = () => {
-  districtsPromise ??= api('/regions/districts')
-    .then((json) => Object.fromEntries(json.data.items.map((d) => [d.district_code, d.name])))
-    .catch((e) => { districtsPromise = null; throw e; });
-  return districtsPromise;
-};
+// ⑧은 masters의 캐시를 같이 쓴다(1단계 거주 구 칸과 한 번만 받도록)
+const loadDistricts = () => loadDistrictList()
+  .then((items) => Object.fromEntries(items.map((d) => [d.district_code, d.name])));
 const loadDongs = (districtCode) => {
   dongsByDistrict[districtCode] ??= api(`/regions/dongs?district_code=${districtCode}`)
     .then((json) => json.data.items)
