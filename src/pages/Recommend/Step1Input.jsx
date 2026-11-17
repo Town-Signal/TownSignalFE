@@ -44,12 +44,12 @@ function NumInput({ value, ...props }) {
 }
 
 /**
- * 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) 입력.
- * 카드 하나에 세 묶음 — 기본 정보 | 희망 업종 | 자격증(좁으면 위아래로 쌓는다).
+ * 1단계: 나이 · 경력 · 자본금 · 희망 면적 · 업종(⑩) · 자격증(⑰) · 거주 구(⑧, 선택) 입력.
+ * 카드 하나에 네 묶음 — 기본 정보 · 자격증 · 거주 구 | 희망 업종(좁으면 위아래로 쌓는다).
  * 계산 버튼과 빈 칸 안내(needText)는 화면 아래 고정 바(Recommend)에 있다. 모바일만 안내를 카드 맨 아래에도 보여 준다
  */
-export default function Step1Input({ cond, setCond, errors = {}, ageBad, needText, masters, mastersError, onRetryMasters }) {
-  const { age, career, capital, area, tags } = cond;
+export default function Step1Input({ cond, setCond, errors = {}, ageBad, needText, masters, mastersError, onRetryMasters, districts }) {
+  const { age, career, capital, area, tags, residence } = cond;
   const cats = useMemo(() => (masters ? groupIndustries(masters.industries) : null), [masters]);
   const big = cats?.[cond.big] ? cond.big : null; // 빈 폼이면 대분류도 고르지 않은 상태
   const [query, setQuery] = useState('');
@@ -168,6 +168,20 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
             )}
           </div>
           {errors.tags && <span className="s1-group-error" role="alert">{errors.tags}</span>}
+        </section>
+
+        <section className="s1-sec s1-group s1-resid">
+          <h2 className="s1-sec-title" id="resid-label">거주 구 <span className="opt">선택</span></h2>
+          <span className="hint">일부 구청 지원사업은 그 구에 사는 청년만 신청할 수 있어요. 고르면 계산에 반영해요.</span>
+          <div className={`s1-input s1-select ${errors.residence ? 'invalid' : ''}`}>
+            <select aria-labelledby="resid-label" value={residence ?? ''} onChange={(e) => setCond({ residence: e.target.value || null })}>
+              <option value="">선택 안 함</option>
+              {/* 목록을 받기 전 · 못 받았을 때도 저장된 값이 '선택 안 함'으로 보이지 않게 */}
+              {residence && !districts?.some((d) => d.district_code === residence) && <option value={residence}>선택한 구</option>}
+              {districts?.map((d) => <option key={d.district_code} value={d.district_code}>{d.name}</option>)}
+            </select>
+          </div>
+          {errors.residence && <span className="s1-group-error" role="alert">{errors.residence}</span>}
         </section>
 
         <section className="s1-sec s1-group s1-ind">

@@ -4,9 +4,10 @@ import { LS } from '../lib/storage';
 const AppState = createContext(null);
 
 // 저장된 조건이 없으면(최초 접속) 1단계를 이 기본값으로 연다 — 25세 · 경력 2년 · 자본금 3,000만 원 · 희망 면적 33㎡(7.1).
-// 업종 · 자격증은 비워 둔다. 사용자가 바꾸기 전에는 ts-cond에 저장하지 않는다(usePersist)
+// 업종 · 자격증 · 거주 구는 비워 둔다. 사용자가 바꾸기 전에는 ts-cond에 저장하지 않는다(usePersist)
+// residence: 거주 자치구 코드(5자리) 또는 null('선택 안 함') — 지원사업 거주 조건 판정에만 쓰인다
 export const DEFAULT_COND = {
-  age: '25', capital: 3000, area: '33', career: 2, big: null, sub: null, industry_code: null, tags: [],
+  age: '25', capital: 3000, area: '33', career: 2, big: null, sub: null, industry_code: null, tags: [], residence: null,
 };
 // 목업 시절 첫 진입에 자동 저장되던 데모 조건 — 사용자가 넣은 값이 아니므로 읽을 때 버린다
 const LEGACY_DEMO_COND = {
@@ -18,6 +19,7 @@ const NO_FAVS = [];
 const NO_FAV_SUBS = {};
 const isDongCode = (s) => typeof s === 'string' && /^\d{8}$/.test(s);
 const isIndustryCode = (s) => typeof s === 'string' && /^CS\d{6}$/.test(s);
+const isDistrictCode = (s) => typeof s === 'string' && /^\d{5}$/.test(s);
 
 /** 정리한 값이 저장된 값과 다르면 다시 쓰고, 비었으면 키를 지운다 */
 const rewrite = (key, raw, clean, empty) => {
@@ -64,7 +66,8 @@ const loadLast = () => {
 };
 
 // ts-cond: 저장된 값이 없으면 DEFAULT_COND. 목업 시절 자동 저장된 데모 조건은 버리고 지운다.
-// 목업 시절 값에는 industry_code가 없다 → null로 두고, 추천 화면이 ⑩ 목록을 받은 뒤 업종 이름으로 맞춘다
+// 목업 시절 값에는 industry_code가 없다 → null로 두고, 추천 화면이 ⑩ 목록을 받은 뒤 업종 이름으로 맞춘다.
+// 거주 구가 없던 예전 값(또는 5자리 코드가 아닌 값)은 '선택 안 함'(null)
 const isLegacyDemo = (v) => Object.entries(LEGACY_DEMO_COND).every(([k, d]) => JSON.stringify(v[k]) === JSON.stringify(d));
 const loadCond = () => {
   const v = LS.get('ts-cond', null);
@@ -75,6 +78,7 @@ const loadCond = () => {
     ...DEFAULT_COND, ...saved,
     tags: Array.isArray(saved.tags) ? saved.tags : [],
     industry_code: typeof saved.industry_code === 'string' ? saved.industry_code : null,
+    residence: isDistrictCode(saved.residence) ? saved.residence : null,
   };
 };
 
