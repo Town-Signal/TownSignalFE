@@ -338,8 +338,9 @@ export default function Dashboard() {
                 </div>
                 <ul className="hero-stats">
                   <HeroStat href="#dash-favs" label="관심 창업지" value={favs.length} unit="곳" />
-                  {!notices.error && <HeroStat href="#dash-notices" label="모집 중 공고" value={openCount} unit="건" />}
-                  {!notices.error && <HeroStat href="#dash-notices" label={`${URGENT_DAYS}일 내 마감`} value={urgentCount} unit="건" />}
+                  {/* 공고를 못 받아도 칩은 남겨 둔다(관심 칩 하나만 넓게 늘어나지 않게) — 값만 '—' */}
+                  <HeroStat href="#dash-notices" label="모집 중 공고" value={notices.error ? '—' : openCount} unit={notices.error ? '' : '건'} />
+                  <HeroStat href="#dash-notices" label={`${URGENT_DAYS}일 내 마감`} value={notices.error ? '—' : urgentCount} unit={notices.error ? '' : '건'} />
                 </ul>
               </div>
             )}

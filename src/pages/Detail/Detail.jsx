@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { useAppState } from '../../context/AppState';
 import { useApiData } from '../../hooks/useApiData';
 import { useApiError } from '../../hooks/useApiError';
-import { findIndustry } from '../../lib/masters';
+import { findIndustry, hasSales } from '../../lib/masters';
 import { useIndustries } from '../../hooks/useIndustries';
 import { isDongCode } from '../../lib/paths';
 import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, scoreText, signed } from '../../lib/format';
@@ -79,7 +79,8 @@ function DongDetail({ code }) {
       </>
     );
   }
-  if (!a.data) {
+  // AI 요약(⑬)도 받은 뒤에 화면을 연다 — 늦게 오면 요약 칸이 끼어들며 아래가 밀린다. 보통 ⑪보다 빨라 기다림은 거의 없음
+  if (!a.data || s.loading) {
     return (
       <>
         {header('행정동 상세')}
@@ -95,6 +96,7 @@ function DongDetail({ code }) {
   const industryName = findIndustry(industries, industryCode)?.name
     ?? d.industry_distribution?.find((x) => x.is_selected)?.name ?? null;
   const noLookup = d.data_status === '조회 불가';
+  const noSales = !!industryCode && !hasSales(industryCode); // 서울시 추정매출에 없는 업종(직접찾기에서만 고를 수 있음)
   const recBadge = fromRec || !!last?.top?.some((t) => t.dong_code === code);
   // 관심 등록은 dong_code + 지금 보는 업종(10.7)
   const fav = favs.includes(code);
@@ -132,13 +134,13 @@ function DongDetail({ code }) {
 
         {/* 핵심 숫자 한 줄 — 3단계 상세 패널과 같은 타일(영업 유지 · 예상 월매출 · 성장세 · 예산 여유 · 임대료) */}
         <div className="detail-kpis">
-          <PredTiles industryCode={industryCode} industryName={industryName} p={p} />
+          <PredTiles industryCode={industryCode} industryName={industryName} p={p} noSales={noSales} />
           <div className="kpi">
             <span className="k">성장세</span>
             <span className="v">
               {growth?.growth_rate != null
                 ? <b style={{ color: rateColor(growth.growth_rate) }}>{growthText(growth.growth_rate)}</b>
-                : <span className="badge badge-gray">정보 없음</span>}
+                : <span className="badge badge-gray">{noSales ? '매출 데이터 없음' : '정보 없음'}</span>}
               {growthLow && <GrowthLowBadge />}
             </span>
             <span className="s">{growthLow ? '확보된 분기가 적거나 상권 기준이 바뀌어 믿기 어려워요. 참고만 해 주세요.' : '최근 1년 매출이 직전 1년보다 이만큼 변했어요.'}</span>
@@ -164,7 +166,8 @@ function DongDetail({ code }) {
         <div className="detail-grid">
           <SalesTrend
             trend={d.sales_trend} breakQuarter={d.space_standard_break}
-            latest={d.latest_quarter} industryName={industryName} empty={<NoLookup what="매출 추이" lookup={noLookup} />}
+            latest={d.latest_quarter} industryName={industryName}
+            empty={noSales ? <NoSales /> : <NoLookup what="매출 추이" lookup={noLookup} />}
           />
           <FootTraffic pop={d.population_latest} empty={<NoLookup what="유동 인구" />} />
           <section className="card detail-card dist">
@@ -249,11 +252,20 @@ function NoLookup({ what, lookup }) {
   );
 }
 
+/** 매출 추이 자리 — 동의 데이터가 모자란 게 아니라 서울시 추정매출에 업종 자체가 없을 때(직접찾기 문구와 같게) */
+const NoSales = () => (
+  <div className="pred-none">
+    <span className="tag">매출 데이터 없음</span>
+    <b>서울시 추정매출에 이 업종이 없어요</b>
+    <span>점포 수 · 유동 인구 · 업종 분포는 그대로 볼 수 있어요.</span>
+  </div>
+);
+
 /**
  * ⑫ 예측 → 핵심 숫자 두 칸(영업 유지 · 예상 월매출). 중앙값 + 80% 범위(p10~p90) — '최소~최대'로 쓰지 않는다.
  * 업종이 없거나 · 불러오는 중 · 오류 · 예측 불가면 두 칸 폭 안내 한 칸(.wide)
  */
-function PredTiles({ industryCode, industryName, p }) {
+function PredTiles({ industryCode, industryName, p, noSales }) {
   const wide = (body) => <div className="kpi wide pred-none">{body}</div>;
   if (!industryCode) {
     return wide(
@@ -275,13 +287,19 @@ function PredTiles({ industryCode, industryName, p }) {
   const sl = range(manwon(x.sales_monthly_p10), manwon(x.sales_monthly_p50), manwon(x.sales_monthly_p90));
   // 두 칸을 다 가리는 건 예측 행이 없거나 영업 유지 · 매출이 둘 다 없을 때만. 하나만 없으면 그 칸만 '정보 없음'
   if (x.data_status === '예측 불가' || (!hasSurvival(sv) && !sl)) {
-    return wide(
+    return wide(noSales ? (
+      <>
+        <span className="tag">매출 데이터 없음</span>
+        <b>서울시 추정매출에 없는 업종이라 예측하지 않아요</b>
+        <span>아래 유동 인구 · 업종 분포는 실제 데이터라 그대로 볼 수 있어요.</span>
+      </>
+    ) : (
       <>
         <span className="tag">예측 불가</span>
         <b>{industryName ?? '이 업종'} 예측에 필요한 데이터가 부족해요</b>
         <span>아래 매출 추이 · 유동 인구 · 업종 분포는 실제 데이터라 그대로 볼 수 있어요.</span>
-      </>,
-    );
+      </>
+    ));
   }
   return (
     <>
@@ -294,7 +312,7 @@ function PredTiles({ industryCode, industryName, p }) {
       </div>
       <div className="kpi">
         <span className="k">예상 월매출 <span>· 80% 범위</span></span>
-        <span className="v">{sl ? <><b>{fmt(sl[1])}</b><small>만 원</small></> : <span className="badge badge-gray">정보 없음</span>}</span>
+        <span className="v">{sl ? <><b>{fmt(sl[1])}</b><small>만 원</small></> : <span className="badge badge-gray">{noSales ? '매출 데이터 없음' : '정보 없음'}</span>}</span>
         {sl && <RangeBar range={sl} max={sl[2] * 1.15} ends={[fmt(sl[0]), fmt(sl[2])]} legend />}
         {x.data_status === '표본 부족' && <span className="s">점포가 적은 주거 지역이라 예측 오차가 클 수 있어요.</span>}
       </div>

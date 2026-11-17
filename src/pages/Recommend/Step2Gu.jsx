@@ -208,7 +208,8 @@ export default function Step2Gu({ cond, budgets, warnings, view, setView, onReca
   const capital = budgets.capital;
   const wide = useMediaQuery(WIDE);
   // 펼친(넓은 화면은 고른) 구는 district_code로 고른다. 지도는 geo_code로 잇는다
-  const [openGu, setOpenGu] = useState(() => (budgets.list.find((g) => g.name === '관악구') ?? budgets.list[0])?.code);
+  // 처음엔 목록 맨 위(가용 예산 1위) 구 — 데이터 오류 구는 고를 수 없어 건너뛴다
+  const [openGu, setOpenGu] = useState(() => (budgets.list.find((g) => !g.isError) ?? budgets.list[0])?.code);
 
   // 지도 색: 예산 여유가 클수록 진한 초록(그리기용 배율)
   const mapGus = useMemo(() => {

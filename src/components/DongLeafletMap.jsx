@@ -207,9 +207,10 @@ function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
     if (c.focusLayer) { map.removeLayer(c.focusLayer); c.focusLayer = null; }
     if (selPin) {
       const feature = c.dong?.features.find((f) => codeOf(f) === selPin.geo);
-      const bounds = feature ? L.geoJSON(feature).getBounds() : L.latLngBounds([selPin.ll, selPin.ll]);
+      // 경계 둘레로 반씩 넓혀 이웃 동이 함께 보이게(작은 동은 꽉 차게 확대되면 어디쯤인지 알 수 없다)
+      const bounds = (feature ? L.geoJSON(feature).getBounds() : L.latLngBounds([selPin.ll, selPin.ll])).pad(0.5);
       afterMove(c, { pop: selPin.key }); // 날아간 뒤 고른 핀이 한 번 톡
-      map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad() + 60], maxZoom: 15, duration: 0.45, easeLinearity: 0.5 });
+      map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad() + 60], maxZoom: 14, duration: 0.45, easeLinearity: 0.5 });
       if (feature) {
         c.focusLayer = L.geoJSON(feature, { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 2.5, fillColor: PRI, fillOpacity: 0.12 } }).addTo(map);
         c.focusLayer.eachLayer((l) => fadeIn(l.getElement(), 300)); // 날아가는 동안 기다렸다가 경계가 서서히
