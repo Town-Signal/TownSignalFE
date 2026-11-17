@@ -430,9 +430,9 @@ body:has(.page.dash, .page.rec, .page.detail, .page.cmp) .site-footer-inner { ma
 /* ───── 하단 바(추천받기 · 상세 공용): 다음 동작 버튼이 늘 화면 아래 같은 자리 ─────
    모바일: 탭바 위 꽉 찬 버튼. 데스크톱: 화면 맨 아래(높이 80px 고정), 본문 폭(1440px)에 맞춰 왼쪽 안내 | 오른쪽 [이전] + 버튼(폭 300px 고정) */
 .rec-cta { height: 56px; border-radius: 14px; font-size: 16px; }
-.rec-bar { position: fixed; left: 0; right: 0; bottom: calc(var(--tab-h) + var(--safe-b)); z-index: 30; padding: 10px 16px; background: #fff; box-shadow: 0 -1px 0 var(--line); border-bottom: 1px solid var(--line-soft); animation: slide-up .45s var(--ease-out) backwards; }
+.rec-bar { position: fixed; left: 0; right: 0; bottom: calc(var(--tab-h) + var(--safe-b)); z-index: 30; padding: 8px 16px; background: #fff; box-shadow: 0 -1px 0 var(--line); border-bottom: 1px solid var(--line-soft); animation: slide-up .45s var(--ease-out) backwards; }
 .rec-bar-act { display: flex; gap: 8px; }
-.rec-bar .rec-cta { flex: 1; min-width: 0; height: 52px; border-radius: 14px; font-size: 16px; }
+.rec-bar .rec-cta { flex: 1; min-width: 0; height: 48px; border-radius: 14px; font-size: 16px; }
 .rec-bar .rec-cta .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* 동 이름이 길면 말줄임 */
 .rec-bar :is(.btn-primary, .btn-ghost) { transition: background-color .25s, color .25s, border-color .2s, box-shadow .3s var(--ease-out), transform .3s var(--ease-out); }
 .rec-bar :is(.btn-primary, .btn-ghost) svg { transition: transform .3s var(--ease-out); }
@@ -450,7 +450,7 @@ body:has(.page.dash, .page.rec, .page.detail, .page.cmp) .site-footer-inner { ma
   .rec-bar-left { flex: 1; min-width: 0; display: grid; align-items: center; }
   .rec-bar-left > * { grid-area: 1 / 1; min-width: 0; }
   .rec-bar-act { flex: none; margin-left: auto; }
-  .rec-bar .rec-cta { flex: none; width: 300px; padding: 0 20px; }
+  .rec-bar .rec-cta { flex: none; width: 300px; height: 52px; padding: 0 20px; }
   .rec-bar-back { height: 52px; padding: 0 18px 0 14px; gap: 4px; border-radius: 14px; font-size: 15px; color: var(--ink-2); }
   body:has(.rec-bar) .toast { bottom: 92px; } /* 바에 토스트가 가리지 않게 그 위로 */
 }

@@ -11,8 +11,8 @@ import { MapMsg } from './ui';
 const PRI = 'oklch(0.47 0.17 262)';
 const DEEP = 'oklch(0.32 0.12 262)';
 const isDesktop = () => window.innerWidth >= 900;
-// 모바일은 하단 시트가 지도 아래쪽을 가리므로 그만큼 비워 두고 맞춘다
-const bottomPad = () => (isDesktop() ? 0 : Math.round(window.innerHeight * 0.28));
+// 모바일 직접찾기는 하단 시트가 지도 아래쪽을 가리므로 그만큼 비워 두고 맞춘다 — Search.css .search-panel max-height(접힘 150px · 펼침 min(60%, 520px))와 같게. 카드 안 지도는 0
+const bottomPad = (map, sheet) => (!sheet || isDesktop() ? 0 : sheet === 'open' ? Math.min(map.getSize().y * 0.6, 520) : 150);
 const reduceMotion = () => window.matchMedia(REDUCED_MOTION).matches;
 /** 레이어 · pane이 서서히 나타나게(Web Animations — CSS 규칙이 닿지 않아 동작 줄이기를 직접 확인) */
 const fadeIn = (el, delay = 0) => { if (el && !reduceMotion()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay, easing: 'ease-out', fill: 'backwards' }); };
@@ -42,9 +42,10 @@ function afterMove(c, opts) {
  *   순위 10위까지는 라벨 핀, 나머지는 점
  * fills: { [동 geo_code]: { color, key } } — 동 경계 색칠(직접찾기). 누르면 onPickDong(key)
  * padLeft: 데스크톱에서 지도 왼쪽을 가리는 패널 폭
+ * sheet: 'open' | 'closed' — 모바일에서 하단 시트가 지도 아래쪽을 가리는 전체 화면 지도(직접찾기)의 시트 상태
  */
 const NO_PASS = new Set();
-export default function DongLeafletMap({ passGus = NO_PASS, selGu, pins, fills, padLeft = 0, onPickDong, onPickGu }) {
+export default function DongLeafletMap({ passGus = NO_PASS, selGu, pins, fills, padLeft = 0, sheet = null, onPickDong, onPickGu }) {
   const elRef = useRef(null);
   const ctx = useRef(null);
   const handlers = useRef({});
@@ -102,8 +103,8 @@ export default function DongLeafletMap({ passGus = NO_PASS, selGu, pins, fills, 
   }, [tries]);
 
   useEffect(() => {
-    if (status === 'ready') draw(ctx.current, { passGus, selGu, pins, fills, padLeft });
-  }, [status, passGus, selGu, pins, fills, padLeft]);
+    if (status === 'ready') draw(ctx.current, { passGus, selGu, pins, fills, padLeft, sheet });
+  }, [status, passGus, selGu, pins, fills, padLeft, sheet]);
 
   return (
     <div className="dong-map">
@@ -138,7 +139,7 @@ function drawFills(c, fills) {
   }).addTo(c.map);
 }
 
-function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
+function draw(c, { passGus, selGu, pins: pinData, fills, padLeft, sheet }) {
   const { map } = c;
   const left = isDesktop() ? padLeft : 0;
 
@@ -195,7 +196,7 @@ function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
         enter = true; // 움직임 없이 바로 맞추므로 이번에 그리면서 나타나게
       } else {
         afterMove(c, { enter: true }); // 이동하는 동안 숨겼다가 멈추면 나타나게
-        map.fitBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad()], maxZoom: 13 });
+        map.fitBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad(map, sheet)], maxZoom: 13 });
       }
     } else enter = pins.length > 0; // 동을 고른 채 업종을 바꾼 경우 — 이동 없이 그 자리에서
     c.fitKey = key;
@@ -210,13 +211,13 @@ function draw(c, { passGus, selGu, pins: pinData, fills, padLeft }) {
       // 경계 둘레로 반씩 넓혀 이웃 동이 함께 보이게(작은 동은 꽉 차게 확대되면 어디쯤인지 알 수 없다)
       const bounds = (feature ? L.geoJSON(feature).getBounds() : L.latLngBounds([selPin.ll, selPin.ll])).pad(0.5);
       afterMove(c, { pop: selPin.key }); // 날아간 뒤 고른 핀이 한 번 톡
-      map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad() + 60], maxZoom: 14, duration: 0.45, easeLinearity: 0.5 });
+      map.flyToBounds(bounds, { paddingTopLeft: [left + 60, 60], paddingBottomRight: [60, bottomPad(map, sheet) + 60], maxZoom: 14, duration: 0.45, easeLinearity: 0.5 });
       if (feature) {
         c.focusLayer = L.geoJSON(feature, { pane: 'dongPane', interactive: false, style: { color: PRI, weight: 2.5, fillColor: PRI, fillOpacity: 0.12 } }).addTo(map);
         c.focusLayer.eachLayer((l) => fadeIn(l.getElement(), 300)); // 날아가는 동안 기다렸다가 경계가 서서히
       }
     } else if (pins.length) {
-      map.flyToBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad()], maxZoom: 13, duration: 0.4, easeLinearity: 0.5 });
+      map.flyToBounds(pinBounds(), { paddingTopLeft: [left, 0], paddingBottomRight: [0, bottomPad(map, sheet)], maxZoom: 13, duration: 0.4, easeLinearity: 0.5 });
     }
     c.lastSel = selKey;
   }

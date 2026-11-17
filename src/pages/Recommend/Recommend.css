@@ -129,7 +129,7 @@
 
 /* ───── 1단계 ───── */
 /* 카드 하나: 머리 아래 세 묶음(.s1-grid) — 넓으면(1040px~) 왼쪽 기본 정보 / 자격증 | 오른쪽 희망 업종,
-   좁으면 같은 순서로 위아래로 쌓는다. 칸 사이는 구분선. 계산 버튼은 하단 바 */
+   좁으면 기본 정보 → 희망 업종 → 자격증 순으로 쌓는다. 칸 사이는 구분선. 계산 버튼은 하단 바 */
 .s1-form { min-width: 0; padding: clamp(20px, 3%, 40px); display: flex; flex-direction: column; gap: 24px; }
 /* 들어올 때 머리 → 세 묶음이 차례로 페이드업(대시보드 히어로와 같은 70ms 간격) */
 .s1-form > .page-head, .s1-grid > * { animation: fade-up .5s var(--ease-out) backwards; }
@@ -237,6 +237,10 @@
   .s1-tags input { font-size: 15px; }
   .s1-status { font-size: 15px; }
 }
+/* 쌓일 때(~1039px)는 필수인 희망 업종을 선택인 자격증보다 위로 — 모바일 첫 화면에서 업종이 보이게 */
+@media (max-width: 1039.98px) {
+  .s1-grid > .s1-cert { order: 1; }
+}
 /* 1040px~: 왼쪽 열 위 기본 정보(나이 · 경력 / 자본금 · 면적) · 아래 자격증 | 오른쪽 열 희망 업종(두 행 높이). 사이는 구분선.
    업종이 100개라 세부 업종 칩이 많아(소매업 31개) 오른쪽을 넓게. 왼쪽은 경력 −/+가 들어갈 380px 아래로 줄지 않는다 */
 @media (min-width: 1040px) {
@@ -276,9 +280,15 @@
 .s2-summary .dots .fail, .dot-counts .fail { background: oklch(0.92 0.006 262); }
 .s2-summary .dots .unknown, .dot-counts .unknown { background: oklch(0.8 0.01 262); }
 .s2-summary .dots .error, .dot-counts .error { background: oklch(0.75 0.12 25); }
-.s2-sum-conds { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* 모바일 요약 띠의 입력한 조건 — 데스크톱 하단 바처럼 한 줄, 넘치면 가로로 밀어 보고 오른쪽 끝은 흐리게(두 줄로 접혀 띠가 높아지지 않게) */
+.s2-sum-conds { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.s2-sum-conds .cap-label { flex: none; white-space: nowrap; }
 .cap-label { font-size: 12px; font-weight: 700; color: var(--muted); }
-.s2-summary .conds { display: flex; flex-wrap: wrap; gap: 6px; }
+.s2-summary .conds {
+  flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+}
+.s2-summary .conds::-webkit-scrollbar { display: none; }
 :is(.s2-summary, .rec-bar) .conds span { flex: none; white-space: nowrap; font-size: 13px; font-weight: 600; padding: 5px 10px; border-radius: 8px; background: oklch(0.965 0.005 262); color: var(--ink-2); }
 .s2-summary .why { font-size: 13px; color: var(--down); word-break: keep-all; }
 .s2-sum-side { display: flex; flex-direction: column; gap: 12px; }

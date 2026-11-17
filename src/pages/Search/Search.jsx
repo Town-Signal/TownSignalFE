@@ -148,7 +148,7 @@ export default function Search() {
       <MobileHeader title="직접찾기" />
       <main className="search">
         <Suspense fallback={<MapMsg />}>
-          <DongLeafletMap selGu={selGu} pins={pins} fills={fills} onPickDong={pickByCode} onPickGu={pickGuGeo} />
+          <DongLeafletMap selGu={selGu} pins={pins} fills={fills} sheet={sheetOpen ? 'open' : 'closed'} onPickDong={pickByCode} onPickGu={pickGuGeo} />
         </Suspense>
 
         <div className={`search-panel ${sheetOpen ? 'open' : ''}`}>
