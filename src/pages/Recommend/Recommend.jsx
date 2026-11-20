@@ -274,7 +274,7 @@ export default function Recommend() {
   return (
     <>
       <MobileHeader
-        title="조건으로 추천받기"
+        title="창업지 추천받기"
         left={<button type="button" className="mob-header-btn" aria-label="이전 단계" disabled={step === 1 && !loading} onClick={back}>‹</button>}
         right={step >= 2 && <button type="button" className="rec-reset-m" onClick={reset}>초기화</button>}
       />

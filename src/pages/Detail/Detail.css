@@ -27,6 +27,8 @@
 .ai-tag i { width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, oklch(0.6 0.16 262), oklch(0.62 0.15 305)); color: #fff; font-size: 11px; font-style: normal; display: flex; align-items: center; justify-content: center; }
 
 /* 핵심 숫자 한 줄: 3단계 상세 패널과 같은 타일(.kpi, global) — 페이지 바탕 위라 흰 카드로. 2칸 → 3칸(720px~) → 5칸(1180px~) */
+.detail-kpis-wrap { margin: -16px; } /* SmoothHeight가 넘침을 자르므로 카드 그림자 자리만큼 넓혀 둔다 */
+.detail-kpis-wrap > .detail-kpis { padding: 16px; }
 .detail-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .detail-kpis .kpi { background: #fff; border-radius: 18px; box-shadow: var(--shadow-card); padding: 14px 18px; gap: 4px; }
 /* 높이를 아끼려고 상세 화면 타일만 숫자 · 여백을 조금 줄인다(3단계 패널 타일은 그대로) */
@@ -211,7 +213,7 @@
 
 /* ───── 움직임: 머리 → 요약 → 카드 순서로 은은하게 페이드업 ───── */
 .detail-hero, .detail-kpis > *, .detail-grid > * { animation: sk-rise .4s var(--ease-out) backwards; } /* 늘 스켈레톤 다음에 오므로 옅은 데서(global sk-rise) */
-.detail-loading :is(.detail-hero, .detail-kpis > *, .detail-grid > *) { animation: none; } /* 스켈레톤은 바로 보이고, 들어오는 움직임은 실제 화면에만 */
+.detail-loading :is(.detail-hero, .ai-summary, .detail-kpis > *, .detail-grid > *) { animation: none; } /* 스켈레톤은 바로 보이고, 들어오는 움직임은 실제 화면에만 */
 .detail-loading .kpi { min-height: 140px; } /* 실제 타일(값 + 범위 막대 · 설명) 높이에 맞춰 들어올 때 덜 출렁이게 */
 .detail-score > div { animation: sk-in .4s ease .12s backwards; }
 .detail-kpis > :nth-child(1) { animation-delay: 80ms; }

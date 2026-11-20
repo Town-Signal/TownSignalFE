@@ -372,7 +372,7 @@ export default function Dashboard() {
                   <p>내 자본금과 받을 수 있는 지원금으로 갈 수 있는 구와 동네를 찾아 드려요.</p>
                   <div className="hero-actions">
                     <Link to="/recommend?step=1" className="hero-cta">새 조건으로 계산하기<Icon name="arrowRight" size={18} /></Link>
-                    <Link to="/search" className="hero-ghost">동네 직접 찾아보기</Link>
+                    <Link to="/search" className="hero-ghost">지도로 찾아보기</Link>
                   </div>
                 </div>
                 <ul className="hero-stats">
@@ -407,14 +407,14 @@ export default function Dashboard() {
                 <Link to="/search" className="fav-add">
                   <span className="plus"><Icon name="plus" size={20} /></span>
                   <b>동네 더 담기</b>
-                  <span>직접 찾아보기에서 ♡를 눌러요</span>
+                  <span>지도로 찾아보기에서 ♡를 눌러요</span>
                 </Link>
               </div>
             ) : (
               <div className="card fav-none">
                 <span className="sec-ico rose"><Icon name="heart" size={20} /></span>
                 <span className="text">추천 결과나 검색에서 ♡를 누르면 여기에 모여요.</span>
-                <Link to="/search" className="btn-ghost">동네 찾아보기</Link>
+                <Link to="/search" className="btn-ghost">지도로 찾아보기</Link>
               </div>
             )}
           </section>
