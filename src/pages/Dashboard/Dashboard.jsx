@@ -6,6 +6,7 @@ import { detailPath } from '../../lib/paths';
 import { daysUntil, fmt, growthText, manwon, rateColor, requestIdText, scoreText, shortDate, signed } from '../../lib/format';
 import { survStyle, survivalView } from '../../lib/survival';
 import { simulatedFailure, toApiError } from '../../lib/errors';
+import { expectedYearLabel, nextExpectedMonth } from '../../lib/schedule';
 import { useApiError } from '../../hooks/useApiError';
 import { useApiData } from '../../hooks/useApiData';
 import { useDongNames } from '../../hooks/useDongNames';
@@ -132,31 +133,40 @@ function HeroStat({ href, label, value, unit }) {
   );
 }
 
-/** ① 공고 한 줄(표시용): 모집 상태 · D-day · 마감일 · 최대 금액(만 원) */
-const toNotice = (p) => {
+/** ① 공고 한 줄(표시용): 모집 상태 · D-day · 마감일 · 최대 금액(만 원). order = 서버 순서(정렬 마지막 기준) */
+const toNotice = (p, order) => {
   const dday = daysUntil(p.apply_end);
   // 옛 응답에는 status가 없고, 그때 ①은 모집 중인 공고만 보냈다
   const closed = (p.status ?? '모집 중') === '마감';
+  // 마감 공고는 다음 모집 예상 연 · 월(lib/schedule — 매년 같은 달에 다시 연다는 가정)
+  const next = closed ? nextExpectedMonth(p) : null;
   return {
     id: p.program_id,
     title: p.name,
     org: p.agency ?? p.district_name,
     amt: `최대 ${fmt(manwon(p.amount_max))}만`,
+    amount: p.amount_max ?? 0,
+    order,
     href: p.source_url,
     dday,
     closed,
+    next,
+    chip: expectedYearLabel(next) ?? '마감', // '올해 예상' · '내년 예상'(예상 연도 vs 오늘 연도)
     urgent: !closed && dday != null && dday <= URGENT_DAYS,
-    // 마감 공고는 내년 같은 시기 모집을 안내한다(apply_end의 월)
-    deadlineTxt: !p.apply_end ? '' : closed ? `매년 ${Number(p.apply_end.slice(5, 7))}월경` : `${shortDate(p.apply_end)} 마감`,
+    deadlineTxt: closed ? (next ? `${next.year}년 ${next.month}월경` : '') : p.apply_end ? `${shortDate(p.apply_end)} 마감` : '',
   };
 };
 
-/** ① 한 줄 — 모집 중은 D-n 칩, 마감은 흐린 행에 '마감' 칩 */
+/** 마감 묶음 정렬 — 다음 모집 예상 연 · 월 가까운 순 → 최대 금액 큰 순 → 서버 순서. 예상이 없으면 맨 뒤 */
+const nextKey = (n) => (n.next ? n.next.year * 12 + n.next.month : Infinity);
+const byNextRecruit = (a, b) => nextKey(a) - nextKey(b) || b.amount - a.amount || a.order - b.order;
+
+/** ① 한 줄 — 모집 중은 D-n 칩, 마감은 흐린 행에 '올해 예상' · '내년 예상' 칩 */
 function NoticeRow({ n }) {
   return (
     <li className={n.closed ? 'closed' : undefined}>
       <a href={n.href} target="_blank" rel="noopener noreferrer">
-        {n.closed ? <span className="dday closed">마감</span>
+        {n.closed ? <span className="dday next">{n.chip}</span>
           : n.dday != null ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>
             : <span className="dday open">모집 중</span>}
         <span className="body"><b>{n.title}</b><span>{n.org} · <span className="nw">{n.amt}</span>{n.closed && <span className="deadline-inline"> · {n.deadlineTxt}</span>}</span></span>
@@ -187,23 +197,29 @@ function NoticeSkeleton() {
   );
 }
 
-/** ① 지원 일정 — 서버 순서 그대로 status로 '지금 모집 중' · '올해 마감' 두 묶음으로 가른다 */
+/**
+ * ① 지원 일정 — status로 '지금 모집 중'(서버 순서 그대로) · 마감(다음 모집 예상 가까운 순) 두 묶음으로 가른다.
+ * 모집 중이 0건이면 왼쪽 칸을 숨기고 마감 묶음을 한 칸 전체 폭으로, 위에 안내 한 줄을 둔다.
+ */
 function NoticeGroups({ items }) {
   const [showAll, setShowAll] = useState(false);
   const open = items.filter((n) => !n.closed);
-  const closed = items.filter((n) => n.closed);
+  const closed = items.filter((n) => n.closed).sort(byNextRecruit);
   const shown = showAll ? closed : closed.slice(0, CLOSED_PREVIEW);
+  const noOpen = open.length === 0;
   return (
-    <div className="card notice-card">
-      <div className="notice-group">
-        <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
-        {open.length
-          ? <ul className="notice-list">{open.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
-          : <p className="notice-none">지금 모집 중인 공고가 없어요</p>}
-      </div>
+    <div className={`card notice-card${noOpen ? ' single' : ''}`}>
+      {noOpen ? (
+        <p className="notice-guide">지금은 모집 기간이 아니에요. 서울 청년 창업 현금 지원은 대부분 1~5월에 열려요. 내년 일정을 미리 확인하세요.</p>
+      ) : (
+        <div className="notice-group">
+          <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
+          <ul className="notice-list">{open.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
+        </div>
+      )}
       {closed.length > 0 && (
         <div className="notice-group">
-          <span className="notice-group-h"><i className="dot" aria-hidden="true" />올해 마감 · 내년 같은 시기 모집 예상</span>
+          <span className="notice-group-h"><i className="dot" aria-hidden="true" />{noOpen ? '다음 모집 예상 · 가까운 순' : '올해 마감 · 내년 같은 시기 모집 예상'}</span>
           <ul className="notice-list">{shown.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
           {!showAll && closed.length > CLOSED_PREVIEW && (
             <button type="button" className="notice-more" onClick={() => setShowAll(true)}>더 보기 ({closed.length - CLOSED_PREVIEW})</button>
