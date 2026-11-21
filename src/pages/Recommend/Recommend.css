@@ -222,13 +222,12 @@
 .s1-indsearch:focus-within > .svg-icon { color: var(--primary); }
 /* 세부 업종 칸: 처음 열 때만 위에서 펼쳐진다. 그 뒤로 대분류를 바꾸거나 검색 결과로 넘어가면 칸은 그대로, 높이는 부드럽게 따라가고(SmoothHeight)
    안 내용만 살짝 떠오르며 바뀐다. 검색어를 칠 때마다는 결과 칩만 옅게 */
-.s1-subs-wrap { overflow: hidden; border-radius: 14px; transition: height .32s var(--ease); }
+.s1-subs-wrap { border-radius: 14px; } /* 높이 따라가기는 .smooth-h(global) */
 .s1-subs { background: var(--bg); border-radius: 14px; padding: 12px; font-size: 12px; color: var(--muted); transform-origin: top; animation: reveal .3s var(--ease) both; }
 .s1-subs-in { display: flex; flex-direction: column; gap: 8px; animation: soft-in .34s var(--ease-out) both; }
 @keyframes soft-in { from { opacity: 0; transform: translateY(4px); } }
 .s1-subs .s1-chips { gap: 6px; }
 .s1-subs .s1-chips.hits { animation: fade-in .2s ease both; }
-@media (prefers-reduced-motion: reduce) { .s1-subs-wrap { transition: none; } }
 
 @keyframes tag-in { from { opacity: 0; transform: scale(.85); } }
 @keyframes tag-out { to { opacity: 0; transform: scale(.85); } }

@@ -1,5 +1,5 @@
 // 여러 화면이 공유하는 작은 표현 컴포넌트 모음
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { hasSurvival, survStyle } from '../lib/survival';
 
 const GROWTH_LOW_TIP = '확보 분기 4개 미만 또는 2024년 상권 기준 변경으로 증감률을 믿기 어려워요';
@@ -56,6 +56,21 @@ export function HeartButton({ on, onClick, className = '' }) {
 }
 
 /** 불러오는 동안 실제 값 자리에 두는 회색 막대(스켈레톤). 폭 · 높이는 그 자리 글자에 맞추고, 칩 자리는 r로 둥글게 */
+/**
+ * 안 내용의 높이가 바뀔 때 바깥 높이를 부드럽게 따라가게 한다(아래 항목이 밀려 내려가며 나타남).
+ * height: auto에는 transition이 안 돼서 ResizeObserver로 잰 높이를 바깥 상자에 넣는다. 처음 잴 때는 애니메이션 없이 그 높이로
+ */
+export function SmoothHeight({ className, wrapClassName = '', children }) {
+  const inner = useRef(null);
+  const [h, setH] = useState();
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => setH(e.borderBoxSize[0].blockSize));
+    ro.observe(inner.current);
+    return () => ro.disconnect();
+  }, []);
+  return <div className={`smooth-h ${wrapClassName}`} style={{ height: h }}><div ref={inner} className={className}>{children}</div></div>;
+}
+
 export const Sk = ({ w = '100%', h = 14, r, className = '' }) => (
   <i className={`sk ${className}`} style={{ width: w, height: h, borderRadius: r }} aria-hidden="true" />
 );

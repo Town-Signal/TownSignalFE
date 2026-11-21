@@ -134,7 +134,7 @@ export default function Compare() {
 
   return (
     <>
-      <MobileHeader title="창업지 비교" />
+      <MobileHeader title="창업지 비교하기" />
       <main className="page cmp">
         <div className="page-head">
           <h1 className="page-title">관심 등록한 창업지 비교</h1>
@@ -147,8 +147,8 @@ export default function Compare() {
             <div className="title">관심 등록한 창업지가 없어요</div>
             <div className="desc">추천 결과나 검색에서 ♡를 눌러 1곳 이상 등록해 주세요.</div>
             <div className="actions">
-              <Link to="/recommend" className="btn-primary">조건으로 추천받기</Link>
-              <Link to="/search" className="btn-ghost">직접 찾아보기</Link>
+              <Link to="/recommend" className="btn-primary">창업지 추천받기</Link>
+              <Link to="/search" className="btn-ghost">지도로 찾아보기</Link>
             </div>
           </div>
         ) : (
