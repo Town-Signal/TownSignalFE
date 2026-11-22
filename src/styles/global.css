@@ -37,10 +37,10 @@
      대시보드 띠가 background-position을 움직여 웅덩이가 함께 흐른다. 밝기는 L 0.35~0.52로 묶어 흰 글자 대비를 지킨다.
      민트 · 하늘 빛은 띠의 ::before · ::after가 따로 떠다닌다 */
   --hero-bg:
-    radial-gradient(55% 75% at 18% 22%, oklch(0.42 0.17 282 / 0.6), oklch(0.42 0.17 282 / 0.24) 45%, transparent 75%),
-    radial-gradient(50% 70% at 80% 88%, oklch(0.52 0.15 238 / 0.5), oklch(0.52 0.15 238 / 0.2) 45%, transparent 75%),
-    radial-gradient(45% 60% at 50% 8%, oklch(0.47 0.16 252 / 0.42), oklch(0.47 0.16 252 / 0.15) 50%, transparent 72%),
-    linear-gradient(118deg, oklch(0.35 0.14 268), oklch(0.41 0.17 260) 50%, oklch(0.44 0.16 250));
+    radial-gradient(55% 75% at 18% 22%, oklch(0.4 0.17 282 / 0.6), oklch(0.4 0.17 282 / 0.24) 45%, transparent 75%),
+    radial-gradient(50% 70% at 80% 88%, oklch(0.5 0.15 238 / 0.5), oklch(0.5 0.15 238 / 0.2) 45%, transparent 75%),
+    radial-gradient(45% 60% at 50% 8%, oklch(0.45 0.16 252 / 0.42), oklch(0.45 0.16 252 / 0.15) 50%, transparent 72%),
+    linear-gradient(118deg, oklch(0.3 0.13 268), oklch(0.36 0.16 260) 50%, oklch(0.4 0.16 250)); /* 원래 색에서 밝기만 조금 내려 밤하늘처럼 */
   /* 어두운 그라데이션의 계단(밴딩)을 가리는 아주 옅은 입자 — 히어로 띠 맨 위 층 */
   --hero-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 

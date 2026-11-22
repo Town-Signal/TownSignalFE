@@ -22,6 +22,7 @@ export const ICONS = {
   plus: 'M12 5v14M5 12h14',
   arrowUp: 'M12 19V5M6 11l6-6 6 6',
   check: 'M5 12.5l4.5 4.5L19 7.5',
+  umbrella: 'M22 12a10 10 0 0 0-20 0zM12 12v8a2 2 0 0 0 4 0M12 2v1',
 };
 
 /** 선 아이콘. filled면 안을 채운다(켜진 하트 · 장식 반짝이) */
