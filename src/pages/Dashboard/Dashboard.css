@@ -4,7 +4,7 @@
 /* 대시보드만 다른 화면(1160px)보다 넓게 쓴다 */
 .page.dash { max-width: 1440px; gap: 28px; padding-top: 24px; }
 
-/* ───── 히어로 띠: 헤더 바로 아래 화면 끝까지. 진한 파랑 + 구석 민트 빛, 흰 글자 ───── */
+/* ───── 히어로 띠: 헤더 바로 아래 화면 끝까지. 진한 파랑(조금 어둡게) + 구석 민트 · 하늘 빛 + 잔별, 흰 글자 ───── */
 .dash-hero {
   position: relative; overflow: hidden; isolation: isolate; container-type: inline-size;
   /* 맨 위 입자 층은 160px 타일로 고정, 아래 메시 층(--hero-bg 4겹)은 넓게 깔아 천천히 흐른다(28초 왕복) */
@@ -93,6 +93,28 @@
   70% { opacity: .45; }
   100% { opacity: 0; transform: translate(-12px, -46px) scale(1); }
 }
+/* 잔별 — 크기가 다른 타일 두 장을 겹쳐 반복 무늬가 안 보이게. 둘째 장만 천천히 숨 쉬듯 반짝인다.
+   두 장이 서로 다른 속도로 아주 천천히 흘러(시차) 멈춰 있는 그림처럼 보이지 않게 — transform만 움직인다 */
+.hero-stars, .hero-stars::after { position: absolute; inset: -40px; z-index: -1; pointer-events: none; }
+.hero-stars { animation: stars-drift 70s ease-in-out infinite alternate; }
+.hero-stars {
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent), radial-gradient(1px 1px at 37% 72%, oklch(1 0 0 / .8) 50%, transparent),
+    radial-gradient(1.5px 1.5px at 68% 41%, #fff 50%, transparent), radial-gradient(1px 1px at 84% 86%, oklch(1 0 0 / .7) 50%, transparent),
+    radial-gradient(1px 1px at 55% 9%, oklch(0.95 0.05 280) 50%, transparent);
+  background-size: 230px 190px; opacity: .55;
+}
+.hero-stars::after {
+  content: "";
+  background:
+    radial-gradient(1.5px 1.5px at 23% 63%, #fff 50%, transparent), radial-gradient(1px 1px at 76% 22%, oklch(0.95 0.06 200) 50%, transparent),
+    radial-gradient(1px 1px at 47% 88%, #fff 50%, transparent), radial-gradient(2px 2px at 91% 54%, oklch(1 0 0 / .9) 50%, transparent);
+  background-size: 370px 310px;
+  animation: stars-breathe 6.5s ease-in-out infinite, stars-drift-near 45s ease-in-out infinite alternate;
+}
+@keyframes stars-drift { to { transform: translate(-28px, 14px); } }
+@keyframes stars-drift-near { to { transform: translate(-22px, 12px); } } /* 가까운 장은 바깥 장 움직임에 더해 조금 더 */
+@keyframes stars-breathe { 0%, 100% { opacity: .25; } 50% { opacity: .85; } }
 /* 좁은 띠(모바일)는 글자가 폭 전체라 알갱이를 절반만 */
 @container (max-width: 699px) {
   .hero-dots i:nth-child(even) { display: none; }
@@ -120,6 +142,7 @@
 .hero-eyebrow { font-size: 14px; font-weight: 400; letter-spacing: 0.01em; color: oklch(1 0 0 / 0.78); }
 .dash-hero h1 { font-size: clamp(26px, 3.2cqw, 38px); font-weight: 800; line-height: 1.25; letter-spacing: -0.03em; word-break: keep-all; }
 .dash-hero p { max-width: 34em; font-size: clamp(14px, 1.2cqw, 16px); line-height: 1.55; color: oklch(1 0 0 / 0.84); word-break: keep-all; text-wrap: pretty; }
+.dash-hero p .clause { display: inline-block; } /* 설명은 쉼표에서만 줄을 바꾼다 */
 
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 8px; }
 .hero-cta {
@@ -305,10 +328,28 @@
     overflow: visible; margin: 0; padding: 0; scroll-snap-type: none;
   }
   .dash .fav-card, .dash .fav-add { width: auto; }
-  /* 지원 일정: 모집 중 | 올해 마감 두 칸 */
-  .dash .notice-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; padding: 4px 24px 8px; }
+  /* 지원 일정: 모집 중 | 다음 모집 예상 두 칸 */
+  .dash .notice-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 32px; padding: 4px 24px 8px; }
   .dash .notice-group + .notice-group { border-top: none; position: relative; }
-  .dash .notice-group + .notice-group::before { content: ""; position: absolute; left: -16px; top: 16px; bottom: 16px; border-left: 1px solid var(--line-soft); }
+  .dash .notice-group + .notice-group::before { content: ""; position: absolute; left: -16px; top: 16px; bottom: 16px; border-left: 1px solid var(--line-soft); transition: opacity .25s; }
+  /* 모집 중 0건: 목록은 처음부터 전체 폭으로 그리고 오른쪽 칸 자리로 밀어 둔 채 시작해, transform만으로 왼쪽으로 미끄러진다
+     (칸 너비를 바꾸면 매 프레임 글줄을 다시 나눠 둔하게 보인다). 왼쪽 빈 칸(.notice-ghost)은 스켈레톤 자리에 겹쳐 두고 같이 밀려 나간다 */
+  .dash .notice-card.no-open { grid-template-columns: minmax(0, 1fr); position: relative; overflow: clip; }
+  .dash .notice-ghost {
+    display: block; position: absolute; top: 4px; left: 24px; width: calc((100% - 80px) / 2); /* 두 칸일 때 왼쪽 칸 자리 */
+    transition: opacity .3s var(--ease), transform .5s var(--ease-out);
+  }
+  .dash .notice-ghost + .notice-group { transform: translateX(calc(50% + 16px)); transition: transform .5s var(--ease-out); } /* 오른쪽 칸 자리에서 출발 */
+  .dash .notice-card.collapsed .notice-ghost { opacity: 0; transform: translateX(-40%); }
+  .dash .notice-card.collapsed .notice-ghost + .notice-group { transform: none; }
+  .dash .notice-card.collapsed .notice-group + .notice-group::before { opacity: 0; }
+  /* 안내 글은 처음엔 높이 0 — 왼쪽 칸이 거의 빠진 뒤 줄이 열리며 아래 '다음 모집 예상' 목록을 밀어 내리고, 글이 떠오른다 */
+  .dash .notice-guide-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .42s var(--ease-out) .65s; } /* 왼쪽 칸이 다 빠지고(.5s) 한 박자 쉰 뒤 */
+  .dash .notice-guide-wrap > div { min-height: 0; overflow: hidden; }
+  .dash .notice-card.collapsed .notice-guide-wrap { grid-template-rows: 1fr; }
+  .dash .notice-guide { opacity: 0; transform: translateY(6px); transition: opacity .35s var(--ease) .78s, transform .45s var(--ease-out) .78s; }
+  .dash .notice-card.collapsed .notice-guide { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .dash .notice-ghost, .dash .notice-ghost + .notice-group, .dash .notice-guide-wrap, .dash .notice-guide { transition: none; } }
 }
 /* 관심 카드 끝 '더 담기' 칸 */
 .fav-add {
@@ -372,32 +413,42 @@
 
 .notice-card { padding: 4px 20px; }
 .notice-group + .notice-group { border-top: 1px solid var(--line-soft); }
+.notice-ghost { display: none; } /* 좁은 화면(위아래 배치)에선 모집 중 0건이면 처음부터 마감 묶음만 */
+.notice-ghost + .notice-group { border-top: none; }
 .notice-group-h { display: flex; align-items: center; gap: 7px; padding: 16px 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
 .notice-group-h .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: oklch(0.8 0.01 262); }
 .notice-group-h .dot.open { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.notice-none { margin: 0; padding: 10px 0 16px; font-size: 14px; color: var(--muted); }
+/* 모집 중 0건일 때 목록 위 안내 한 줄 */
+.notice-guide { display: flex; align-items: center; gap: 14px; margin: 16px 0 4px; font-size: 14px; line-height: 1.5; color: var(--muted); word-break: keep-all; text-wrap: pretty; }
+.notice-guide .sec-ico { width: 44px; height: 44px; border-radius: 14px; } /* 관심 0곳 안내(.fav-none)와 같은 크기 */
 .notice-more { display: block; width: 100%; height: 44px; border: none; border-top: 1px solid var(--line-soft); background: none; font-size: 13px; font-weight: 600; color: var(--primary); }
+.notice-more-wrap { margin: 0 -10px; } /* SmoothHeight가 넘침을 자르므로 행 hover 배경(-10px) 자리만큼 넓혀 둔다 */
+.notice-more-wrap > div { padding: 0 10px; }
 .notice-list { list-style: none; margin: 0; padding: 0; }
+/* '더 보기' 자동 스크롤이 마지막 행을 화면 아래 끝에 딱 붙이지 않게 — 모바일은 탭 바 높이만큼 더 */
+.notice-list li { scroll-margin-bottom: 24px; }
+@media (max-width: 899.98px) { .notice-list li { scroll-margin-bottom: calc(var(--tab-h) + var(--safe-b) + 24px); } }
 .notice-list li { animation: sk-rise .35s var(--ease-out) backwards; } /* 스켈레톤 다음 · '더 보기'로 펼친 행도 옅은 데서 들어옴 */
 .notice-list li + li { border-top: 1px solid var(--line-soft); }
 .notice-list a { display: flex; align-items: center; gap: 14px; padding: 14px 10px; margin: 0 -10px; border-radius: 12px; color: inherit; }
 .notice-list .dday { flex: none; width: 52px; text-align: center; font-size: 13px; font-weight: 700; padding: 6px 0; box-sizing: border-box; white-space: nowrap; border-radius: 9px; background: var(--line-soft); color: var(--ink-3); }
 .notice-list .dday.urgent { background: var(--down); color: #fff; box-shadow: 0 6px 14px -8px oklch(0.55 0.17 25 / 0.9); }
 .notice-list .dday.open { font-size: 11px; font-weight: 600; padding: 7px 0; background: var(--accent-soft); color: var(--accent-ink); }
+.notice-list .dday.next { font-size: 11px; font-weight: 600; padding: 7px 0; background: var(--primary-soft); color: var(--primary); } /* 마감 공고 '내년 예상' — 흐린 행 안에서도 색은 그대로 */
 .notice-list .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); word-break: keep-all; }
 .notice-list .body b { font-size: 15px; color: var(--ink); word-break: keep-all; }
 .notice-list .deadline { flex: none; font-size: 12px; color: var(--muted-2); }
 .notice-list .ext { color: var(--muted-2); transition: color .2s, transform .3s var(--ease-out); }
-.notice-list li.closed .body, .notice-list li.closed .body b, .notice-list li.closed .deadline, .notice-list .dday.closed { color: var(--muted-2); }
+.notice-list li.closed .body, .notice-list li.closed .body b, .notice-list li.closed .deadline { color: var(--muted-2); }
 .notice-list .nw { white-space: nowrap; } /* '최대 10,000만'은 한 덩어리로 */
-.notice-list .deadline-inline { display: none; white-space: nowrap; } /* '매년 N월경'이 단어 중간에서 끊기지 않게 */
+.notice-list .deadline-inline { display: none; white-space: nowrap; } /* 'YYYY년 N월경'이 단어 중간에서 끊기지 않게 */
 @media (hover: hover) {
   .notice-list a:hover { background: var(--bg); color: inherit; }
   .notice-list a:hover .ext { color: var(--primary); transform: translate(1px, -1px); }
 }
 @media (max-width: 419.98px) {
   .notice-list .deadline { display: none; }
-  .notice-list .deadline-inline { display: inline; } /* 마감 행만 '매년 N월경'을 기관 · 금액 줄 끝에 */
+  .notice-list .deadline-inline { display: inline; } /* 마감 행만 'YYYY년 N월경'을 기관 · 금액 줄 끝에 */
 }
 
 /* 관심 카드 안 안내(업종 없음 · 불러오기 실패) */

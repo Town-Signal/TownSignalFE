@@ -37,10 +37,10 @@
      대시보드 띠가 background-position을 움직여 웅덩이가 함께 흐른다. 밝기는 L 0.35~0.52로 묶어 흰 글자 대비를 지킨다.
      민트 · 하늘 빛은 띠의 ::before · ::after가 따로 떠다닌다 */
   --hero-bg:
-    radial-gradient(55% 75% at 18% 22%, oklch(0.42 0.17 282 / 0.6), oklch(0.42 0.17 282 / 0.24) 45%, transparent 75%),
-    radial-gradient(50% 70% at 80% 88%, oklch(0.52 0.15 238 / 0.5), oklch(0.52 0.15 238 / 0.2) 45%, transparent 75%),
-    radial-gradient(45% 60% at 50% 8%, oklch(0.47 0.16 252 / 0.42), oklch(0.47 0.16 252 / 0.15) 50%, transparent 72%),
-    linear-gradient(118deg, oklch(0.35 0.14 268), oklch(0.41 0.17 260) 50%, oklch(0.44 0.16 250));
+    radial-gradient(55% 75% at 18% 22%, oklch(0.4 0.17 282 / 0.6), oklch(0.4 0.17 282 / 0.24) 45%, transparent 75%),
+    radial-gradient(50% 70% at 80% 88%, oklch(0.5 0.15 238 / 0.5), oklch(0.5 0.15 238 / 0.2) 45%, transparent 75%),
+    radial-gradient(45% 60% at 50% 8%, oklch(0.45 0.16 252 / 0.42), oklch(0.45 0.16 252 / 0.15) 50%, transparent 72%),
+    linear-gradient(118deg, oklch(0.3 0.13 268), oklch(0.36 0.16 260) 50%, oklch(0.4 0.16 250)); /* 원래 색에서 밝기만 조금 내려 밤하늘처럼 */
   /* 어두운 그라데이션의 계단(밴딩)을 가리는 아주 옅은 입자 — 히어로 띠 맨 위 층 */
   --hero-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
@@ -151,6 +151,7 @@ main[tabindex="-1"]:focus { outline: none; } /* '맨 위로' 뒤 본문으로 �
 .desk-nav { display: flex; gap: 6px; white-space: nowrap; }
 .desk-nav a { display: flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: 12px; font-size: 15px; font-weight: 500; color: var(--muted-2); }
 .desk-nav a.active { background: var(--primary-soft); color: var(--primary); font-weight: 700; animation: bg-in .35s var(--ease-out); }
+@media (max-width: 1039.98px) { .desk-nav a { padding: 10px 10px; } } /* 메뉴 이름이 길어 900px 근처에서 로고와 겹치지 않게 */
 @media (hover: hover) {
   .desk-nav a:not(.active):hover { background: oklch(0.955 0.008 262); color: var(--ink-2); }
 }
@@ -174,7 +175,7 @@ a.active .tab-icon { fill-opacity: .18; stroke-width: 2.2; }
   background: #fff; box-shadow: 0 -1px 0 var(--line);
   display: grid; grid-template-columns: repeat(4, 1fr);
 }
-.tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted-2); }
+.tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted-2); white-space: nowrap; letter-spacing: -0.03em; }
 .tabbar a.active { color: var(--primary); font-weight: 700; }
 /* 활성 탭: 아이콘 뒤에 작은 pill. 패딩은 모든 탭에 같게 둬서 탭을 바꿔도 위치가 움직이지 않는다 */
 .tabbar .tab-icon { box-sizing: content-box; padding: 3px 14px; border-radius: 14px; transition: fill-opacity .2s, background-color .2s; }
@@ -515,3 +516,7 @@ body:has(.page.dash, .page.rec, .page.detail, .page.cmp) .site-footer-inner { ma
 .map-loading { background: oklch(0.94 0.006 262); animation: sk-pulse 1.4s ease-in-out infinite; } /* 지도 자리 스켈레톤 */
 .map-msg.error b { font-size: 15px; color: var(--ink); }
 .map-msg.error button { height: 40px; margin-top: 8px; }
+
+/* SmoothHeight(ui.jsx): 안 내용 높이가 바뀌면 바깥 높이가 따라가며 아래 항목이 미끄러지듯 밀린다 */
+.smooth-h { overflow: hidden; transition: height .32s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .smooth-h { transition: none; } }

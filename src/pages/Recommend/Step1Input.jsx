@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fmt } from '../../lib/format';
-import { BoxMsg, Icon, Sk } from '../../components/ui';
+import { BoxMsg, Icon, Sk, SmoothHeight } from '../../components/ui';
 import { groupIndustries } from '../../lib/masters';
 import { usePresence } from '../../hooks/usePresence';
 
@@ -92,21 +92,6 @@ function ResidencePicker({ value, districts, invalid, onPick }) {
       )}
     </div>
   );
-}
-
-/**
- * 세부 업종 칸: 대분류를 바꾸거나 검색 결과로 넘어가도 칸은 그대로 두고, 높이는 안 내용을 따라 부드럽게 늘고 줄며 안 내용만 은은하게 바뀐다.
- * 높이는 ResizeObserver로 잰 안쪽 높이를 바깥에 숫자로 넣어 transition(auto는 transition이 안 돼서).
- */
-function SmoothHeight({ className, children }) {
-  const inner = useRef(null);
-  const [h, setH] = useState();
-  useEffect(() => {
-    const ro = new ResizeObserver(([e]) => setH(e.borderBoxSize[0].blockSize));
-    ro.observe(inner.current);
-    return () => ro.disconnect();
-  }, []);
-  return <div className="s1-subs-wrap" style={{ height: h }}><div ref={inner} className={className}>{children}</div></div>;
 }
 
 /**
@@ -270,7 +255,7 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                 </label>
               </div>
               {indHits || big ? (
-                <SmoothHeight className="s1-subs">
+                <SmoothHeight wrapClassName="s1-subs-wrap" className="s1-subs">
                   {indHits ? (
                     <div className="s1-subs-in" key="q">
                       {indHits.length ? (
@@ -288,7 +273,7 @@ export default function Step1Input({ cond, setCond, errors = {}, ageBad, needTex
                         </>
                       ) : (
                         <span>
-                          ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">직접 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
+                          ‘{iq}’ 업종이 없어요. 매출 데이터가 없는 업종(세무사 · 사진관 등)은 추천에서 빠져요 — <Link to="/search">지도로 찾아보기</Link>에서 점포 수 증감을 볼 수 있어요
                         </span>
                       )}
                     </div>

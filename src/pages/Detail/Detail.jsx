@@ -9,7 +9,7 @@ import { isDongCode } from '../../lib/paths';
 import { areaText, fmt, growthText, manwon, quarterText, rateColor, rentQuarterText, requestIdText, scoreText, signed } from '../../lib/format';
 import { hasSurvival, survivalView } from '../../lib/survival';
 import { MobileHeader } from '../../components/Layout';
-import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, Sk, SkKpi, SurvivalValue } from '../../components/ui';
+import { BackIcon, BoxMsg, GrowthLowBadge, HeartButton, Icon, RangeBar, ResidentialBadge, Sk, SkKpi, SmoothHeight, SurvivalValue } from '../../components/ui';
 import LegacyDongRedirect from './LegacyDongRedirect';
 import SalesTrend from './SalesTrend';
 import FootTraffic from './FootTraffic';
@@ -73,7 +73,7 @@ function DongDetail({ code }) {
             <div className="icon">?</div>
             <div className="title">찾을 수 없는 동네예요</div>
             <div className="desc">주소가 바뀌었거나 서울 행정동이 아니에요. 다른 동네를 찾아보세요.</div>
-            <div className="actions"><Link to="/search" className="btn-primary">직접 찾아보기</Link></div>
+            <div className="actions"><Link to="/search" className="btn-primary">지도로 찾아보기</Link></div>
           </div>
         </main>
       </>
@@ -132,8 +132,9 @@ function DongDetail({ code }) {
           </div>
         )}
 
-        {/* 핵심 숫자 한 줄 — 3단계 상세 패널과 같은 타일(영업 유지 · 예상 월매출 · 성장세 · 예산 여유 · 임대료) */}
-        <div className="detail-kpis">
+        {/* 핵심 숫자 한 줄 — 3단계 상세 패널과 같은 타일(영업 유지 · 예상 월매출 · 성장세 · 예산 여유 · 임대료).
+            예측 · 예산 여유가 늦게 와 칸이 커질 때 아래 차트가 툭 밀리지 않고 미끄러져 내려가게(SmoothHeight) */}
+        <SmoothHeight wrapClassName="detail-kpis-wrap" className="detail-kpis">
           <PredTiles industryCode={industryCode} industryName={industryName} p={p} noSales={noSales} />
           <div className="kpi">
             <span className="k">성장세</span>
@@ -160,7 +161,7 @@ function DongDetail({ code }) {
                   : `이 동이 아닌 ${rent.basis}이에요 (${areaText(rent.area_sqm)} 기준).`}
             </span>
           </div>
-        </div>
+        </SmoothHeight>
 
         {/* 자세히 볼 차트 3칸(같은 높이): 매출 추이 · 유동 인구 · 업종 분포 */}
         <div className="detail-grid">
@@ -231,6 +232,11 @@ function DetailSkeleton() {
         <div className="detail-id"><Sk w={150} h={40} /><Sk w={130} h={28} /></div>
         <div className="detail-score"><Sk w={84} h={62} /></div>
       </div>
+      {/* AI 요약 자리 — 요약이 오면 같은 자리에 들어와 아래가 밀리지 않게 */}
+      <div className="ai-summary">
+        <span className="ai-tag"><i>AI</i>요약을 만드는 중이에요</span>
+        <Sk h={18} /><Sk w="60%" h={18} />
+      </div>
       <div className="detail-kpis">
         {[0, 1, 2, 3, 4].map((i) => <SkKpi key={i} />)}
       </div>
@@ -272,7 +278,7 @@ function PredTiles({ industryCode, industryName, p, noSales }) {
       <>
         <span className="tag">업종 미선택</span>
         <b>업종을 고르면 예측을 볼 수 있어요</b>
-        <Link to="/search">직접 찾아보기에서 업종 고르기 ›</Link>
+        <Link to="/search">지도로 찾아보기에서 업종 고르기 ›</Link>
       </>,
     );
   }

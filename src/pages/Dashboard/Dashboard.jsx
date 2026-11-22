@@ -6,6 +6,7 @@ import { detailPath } from '../../lib/paths';
 import { daysUntil, fmt, growthText, manwon, rateColor, requestIdText, scoreText, shortDate, signed } from '../../lib/format';
 import { survStyle, survivalView } from '../../lib/survival';
 import { simulatedFailure, toApiError } from '../../lib/errors';
+import { expectedYearLabel, nextExpectedMonth } from '../../lib/schedule';
 import { useApiError } from '../../hooks/useApiError';
 import { useApiData } from '../../hooks/useApiData';
 import { useDongNames } from '../../hooks/useDongNames';
@@ -14,7 +15,7 @@ import { usePresence } from '../../hooks/usePresence';
 import { REDUCED_MOTION, useMediaQuery } from '../../hooks/useMediaQuery';
 import { findIndustry } from '../../lib/masters';
 import { Brand, MobileHeader } from '../../components/Layout';
-import { BoxMsg, HeartButton, Icon, LowDot, ResidentialBadge, Sk, Toast } from '../../components/ui';
+import { BoxMsg, HeartButton, Icon, LowDot, ResidentialBadge, Sk, SmoothHeight, Toast } from '../../components/ui';
 import { lastTopItem } from '../Recommend/view';
 import './Dashboard.css';
 
@@ -58,10 +59,10 @@ function ScoreRing({ score }) {
 // 소개 띠 제목 — 몇 초마다 은은하게 바뀐다. 줄 길이는 모바일(26px)에서도 두 줄에 들어가게 맞춘다
 const HEADLINES = [
   ['가게 열 동네,', '감 말고 데이터로 정해요'],
-  ['지원금을 더하면', '갈 수 있는 동네가 늘어나요'],
+  ['청년 창업 지원,', '내 조건에 맞는 것만 골라 봐요'],
   ['서울 25개 구,', '내 예산으로 어디까지 갈까요'],
   ['매출도 영업 유지도,', '열기 전에 미리 따져 봐요'],
-  ['놓치기 쉬운 창업 지원금,', '한 번에 계산해 드려요'],
+  ['다음 모집은 언제일까요,', '지원 일정을 미리 챙겨요'],
 ];
 const HEADLINE_MS = 6000; // 한 문장을 보여 주는 시간
 const HEADLINE_OUT_MS = 300; // 나가는 애니메이션 길이(CSS head-out과 맞춘다)
@@ -132,31 +133,40 @@ function HeroStat({ href, label, value, unit }) {
   );
 }
 
-/** ① 공고 한 줄(표시용): 모집 상태 · D-day · 마감일 · 최대 금액(만 원) */
-const toNotice = (p) => {
+/** ① 공고 한 줄(표시용): 모집 상태 · D-day · 마감일 · 최대 금액(만 원). order = 서버 순서(정렬 마지막 기준) */
+const toNotice = (p, order) => {
   const dday = daysUntil(p.apply_end);
   // 옛 응답에는 status가 없고, 그때 ①은 모집 중인 공고만 보냈다
   const closed = (p.status ?? '모집 중') === '마감';
+  // 마감 공고는 다음 모집 예상 연 · 월(lib/schedule — 매년 같은 달에 다시 연다는 가정)
+  const next = closed ? nextExpectedMonth(p) : null;
   return {
     id: p.program_id,
     title: p.name,
     org: p.agency ?? p.district_name,
     amt: `최대 ${fmt(manwon(p.amount_max))}만`,
+    amount: p.amount_max ?? 0,
+    order,
     href: p.source_url,
     dday,
     closed,
+    next,
+    chip: expectedYearLabel(next) ?? '마감', // '올해 예상' · '내년 예상'(예상 연도 vs 오늘 연도)
     urgent: !closed && dday != null && dday <= URGENT_DAYS,
-    // 마감 공고는 내년 같은 시기 모집을 안내한다(apply_end의 월)
-    deadlineTxt: !p.apply_end ? '' : closed ? `매년 ${Number(p.apply_end.slice(5, 7))}월경` : `${shortDate(p.apply_end)} 마감`,
+    deadlineTxt: closed ? (next ? `${next.year}년 ${next.month}월경` : '') : p.apply_end ? `${shortDate(p.apply_end)} 마감` : '',
   };
 };
 
-/** ① 한 줄 — 모집 중은 D-n 칩, 마감은 흐린 행에 '마감' 칩 */
+/** 마감 묶음 정렬 — 다음 모집 예상 연 · 월 가까운 순 → 최대 금액 큰 순 → 서버 순서. 예상이 없으면 맨 뒤 */
+const nextKey = (n) => (n.next ? n.next.year * 12 + n.next.month : Infinity);
+const byNextRecruit = (a, b) => nextKey(a) - nextKey(b) || b.amount - a.amount || a.order - b.order;
+
+/** ① 한 줄 — 모집 중은 D-n 칩, 마감은 흐린 행에 '올해 예상' · '내년 예상' 칩 */
 function NoticeRow({ n }) {
   return (
     <li className={n.closed ? 'closed' : undefined}>
       <a href={n.href} target="_blank" rel="noopener noreferrer">
-        {n.closed ? <span className="dday closed">마감</span>
+        {n.closed ? <span className="dday next">{n.chip}</span>
           : n.dday != null ? <span className={`dday ${n.urgent ? 'urgent' : ''}`}>D-{n.dday}</span>
             : <span className="dday open">모집 중</span>}
         <span className="body"><b>{n.title}</b><span>{n.org} · <span className="nw">{n.amt}</span>{n.closed && <span className="deadline-inline"> · {n.deadlineTxt}</span>}</span></span>
@@ -168,46 +178,95 @@ function NoticeRow({ n }) {
 }
 
 /** ① 지원 일정을 받는 동안 — 같은 카드 · 두 묶음에 공고 줄 자리(D-day · 제목 · 기관)만 막대 */
+const skRow = (i) => (
+  <li key={i}><a aria-hidden="true"><Sk w={52} h={30} r={9} /><span className="body"><Sk w="65%" h={16} /><Sk w="40%" h={12} /></span></a></li>
+);
 function NoticeSkeleton() {
-  const row = (i) => (
-    <li key={i}><a aria-hidden="true"><Sk w={52} h={30} r={9} /><span className="body"><Sk w="65%" h={16} /><Sk w="40%" h={12} /></span></a></li>
-  );
   return (
     <div className="card notice-card" aria-busy="true">
       <span className="sr-only" role="status">공고를 불러오는 중…</span>
       <div className="notice-group">
         <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
-        <ul className="notice-list">{[0, 1, 2].map(row)}</ul>
+        <ul className="notice-list">{[0, 1, 2].map(skRow)}</ul>
       </div>
       <div className="notice-group">
-        <span className="notice-group-h"><i className="dot" aria-hidden="true" />올해 마감 · 내년 같은 시기 모집 예상</span>
-        <ul className="notice-list">{[3, 4, 5].map(row)}</ul>
+        <span className="notice-group-h"><i className="dot" aria-hidden="true" />다음 모집 예상 · 가까운 순</span>
+        <ul className="notice-list">{[3, 4, 5].map(skRow)}</ul>
       </div>
     </div>
   );
 }
 
-/** ① 지원 일정 — 서버 순서 그대로 status로 '지금 모집 중' · '올해 마감' 두 묶음으로 가른다 */
+/**
+ * ① 지원 일정 — status로 '지금 모집 중'(서버 순서 그대로) · 마감(다음 모집 예상 가까운 순) 두 묶음으로 가른다.
+ * 모집 중이 0건이면 왼쪽 칸을 숨기고 마감 묶음을 한 칸 전체 폭으로, 위에 안내 한 줄을 둔다.
+ */
 function NoticeGroups({ items }) {
   const [showAll, setShowAll] = useState(false);
+  const scrollAfterOpen = useRef(false); // '더 보기'로 펼칠 때만 따라 내려 준다
+  const groupRef = useRef(null);
+  const reduce = useMediaQuery(REDUCED_MOTION);
+  useEffect(() => {
+    if (!showAll || !scrollAfterOpen.current) return undefined;
+    scrollAfterOpen.current = false;
+    if (reduce) return undefined; // 움직임 줄이기면 펼침도 즉시라 자동 스크롤도 안 함
+    // 카드가 커지는 동안 같이 내려간다(SmoothHeight .32s와 같은 곡선). 마지막 섹션이라 페이지가 아직 덜 길면
+    // scrollTo가 그 프레임의 끝에서 멈추고, 다음 프레임에 다시 따라간다
+    const last = groupRef.current?.querySelector('.notice-list li:last-child');
+    if (!last) return undefined;
+    const dist = last.getBoundingClientRect().bottom + parseFloat(getComputedStyle(last).scrollMarginBottom) - window.innerHeight;
+    if (dist <= 0) return undefined;
+    const y0 = window.scrollY;
+    const t0 = performance.now();
+    const ease = (p) => 1 - (1 - p) ** 3;
+    let raf;
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / 320);
+      window.scrollTo({ top: y0 + dist * ease(p), behavior: 'instant' }); // html의 scroll-behavior: smooth를 끈다 — 프레임마다 새 부드러운 스크롤이 시작돼 뒤처진다
+      // 높이 전환이 한두 프레임 늦게 끝나면 끝자리가 덜 내려가 있어서, 닿을 때까지 조금 더 따라간다
+      if (p < 1 || (window.scrollY < y0 + dist - 1 && t - t0 < 600)) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [showAll, reduce]);
   const open = items.filter((n) => !n.closed);
-  const closed = items.filter((n) => n.closed);
+  const closed = items.filter((n) => n.closed).sort(byNextRecruit);
   const shown = showAll ? closed : closed.slice(0, CLOSED_PREVIEW);
+  const noOpen = open.length === 0;
+  // 모집 중 0건: 스켈레톤의 왼쪽 칸을 잠깐 그대로 두었다가 왼쪽으로 밀어내고 마감 묶음이 전체 폭을 차지한다(넓은 화면만, CSS)
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (!noOpen) return undefined;
+    const t = setTimeout(() => setCollapsed(true), 120);
+    return () => clearTimeout(t);
+  }, [noOpen]);
   return (
-    <div className="card notice-card">
-      <div className="notice-group">
-        <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
-        {open.length
-          ? <ul className="notice-list">{open.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
-          : <p className="notice-none">지금 모집 중인 공고가 없어요</p>}
-      </div>
-      {closed.length > 0 && (
+    <div className={`card notice-card${noOpen ? ' no-open' : ''}${collapsed ? ' collapsed' : ''}`}>
+      {noOpen ? (
+        <div className="notice-group notice-ghost" aria-hidden="true">
+          <span className="notice-group-h"><i className="dot open" />지금 모집 중</span>
+          <ul className="notice-list">{[0, 1, 2].map(skRow)}</ul>
+        </div>
+      ) : (
         <div className="notice-group">
-          <span className="notice-group-h"><i className="dot" aria-hidden="true" />올해 마감 · 내년 같은 시기 모집 예상</span>
-          <ul className="notice-list">{shown.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
-          {!showAll && closed.length > CLOSED_PREVIEW && (
-            <button type="button" className="notice-more" onClick={() => setShowAll(true)}>더 보기 ({closed.length - CLOSED_PREVIEW})</button>
+          <span className="notice-group-h"><i className="dot open" aria-hidden="true" />지금 모집 중</span>
+          <ul className="notice-list">{open.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
+        </div>
+      )}
+      {closed.length > 0 && (
+        <div className="notice-group" ref={groupRef}>
+          {noOpen && (
+            // 넓은 화면: 왼쪽 칸이 빠진 뒤 이 줄이 열리며 아래 목록을 밀어 내린다(CSS grid-template-rows 0fr → 1fr)
+            <div className="notice-guide-wrap"><div><p className="notice-guide"><span className="sec-ico sky" aria-hidden="true"><Icon name="umbrella" size={20} /></span><span>지금은 모집 기간이 아니에요. 서울 청년 창업 현금 지원은 대부분 1~5월에 열려요. 내년 일정을 미리 확인하세요.</span></p></div></div>
           )}
+          <span className="notice-group-h"><i className="dot" aria-hidden="true" />다음 모집 예상 · 가까운 순</span>
+          {/* '더 보기'로 펼칠 때 카드가 툭 늘지 않고 미끄러지듯 커지게 */}
+          <SmoothHeight wrapClassName="notice-more-wrap">
+            <ul className="notice-list">{shown.map((n) => <NoticeRow key={n.id} n={n} />)}</ul>
+            {!showAll && closed.length > CLOSED_PREVIEW && (
+              <button type="button" className="notice-more" onClick={() => { scrollAfterOpen.current = true; setShowAll(true); }}>더 보기 ({closed.length - CLOSED_PREVIEW})</button>
+            )}
+          </SmoothHeight>
         </div>
       )}
     </div>
@@ -283,6 +342,7 @@ export default function Dashboard() {
       <main className="dash-main">
         {/* 헤더 바로 아래 화면 끝까지 붙은 파란 띠. 최근 추천 결과가 있으면 결과를, 없으면 소개와 계산 버튼을 보여 준다 */}
         <section className={`dash-hero ${first ? 'is-result' : 'is-intro'}`} aria-labelledby="dash-hero-title">
+          <div className="hero-stars" aria-hidden="true" />
           <Icon name="sparkle" filled size={180} className="hero-spark big" />
           <Icon name="sparkle" filled size={36} className="hero-spark small" />
           <Icon name="sparkle" filled size={18} className="hero-spark tiny t1" />
@@ -369,10 +429,10 @@ export default function Dashboard() {
                 <div className="hero-copy">
                   <span className="hero-eyebrow">서울 청년 창업 입지 추천</span>
                   <RotatingHeadline id="dash-hero-title" />
-                  <p>내 자본금과 받을 수 있는 지원금으로 갈 수 있는 구와 동네를 찾아 드려요.</p>
+                  <p><span className="clause">내 자본금과 청년 창업 지원을 함께 따져,</span> <span className="clause">갈 수 있는 구와 동네를 찾아 드려요.</span></p>
                   <div className="hero-actions">
                     <Link to="/recommend?step=1" className="hero-cta">새 조건으로 계산하기<Icon name="arrowRight" size={18} /></Link>
-                    <Link to="/search" className="hero-ghost">동네 직접 찾아보기</Link>
+                    <Link to="/search" className="hero-ghost">지도에서 찾아보기</Link>
                   </div>
                 </div>
                 <ul className="hero-stats">
@@ -407,14 +467,14 @@ export default function Dashboard() {
                 <Link to="/search" className="fav-add">
                   <span className="plus"><Icon name="plus" size={20} /></span>
                   <b>동네 더 담기</b>
-                  <span>직접 찾아보기에서 ♡를 눌러요</span>
+                  <span>지도로 찾아보기에서 ♡를 눌러요</span>
                 </Link>
               </div>
             ) : (
               <div className="card fav-none">
                 <span className="sec-ico rose"><Icon name="heart" size={20} /></span>
                 <span className="text">추천 결과나 검색에서 ♡를 누르면 여기에 모여요.</span>
-                <Link to="/search" className="btn-ghost">동네 찾아보기</Link>
+                <Link to="/search" className="btn-ghost">지도에서 찾아보기</Link>
               </div>
             )}
           </section>

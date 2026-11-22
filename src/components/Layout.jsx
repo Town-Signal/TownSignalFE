@@ -6,10 +6,10 @@ import { REDUCED_MOTION, useMediaQuery } from '../hooks/useMediaQuery';
 const TO_TOP_AFTER = 240; // 이만큼 내려가면 '맨 위로' 버튼을 띄운다(px). 데스크톱 대시보드는 끝까지 내려도 300px 남짓이라 낮게 잡는다
 
 const TABS = [
-  ['대시보드', '/', 'M4 4h7v16H4zM13 4h7v7h-7zM13 13h7v7h-7z'],
-  ['추천받기', '/recommend', ICONS.spark],
-  ['직접찾기', '/search', 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z'],
-  ['비교하기', '/compare', 'M4 20V11h5v9zM15 20V5h5v15zM2.5 20h19'],
+  ['홈', '/', 'M4 4h7v16H4zM13 4h7v7h-7zM13 13h7v7h-7z'],
+  ['창업지 추천받기', '/recommend', ICONS.spark],
+  ['지도에서 찾아보기', '/search', 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z'],
+  ['창업지 비교하기', '/compare', 'M4 20V11h5v9zM15 20V5h5v15zM2.5 20h19'],
 ];
 
 function Tabs({ iconSize }) {

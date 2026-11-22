@@ -54,7 +54,10 @@
 .ind-pop input { height: 40px; border: 1px solid oklch(0.9 0.008 262); border-radius: 10px; padding: 0 12px; font-size: 14px; outline: none; transition: border-color .2s; }
 .ind-pop input:focus { border-color: var(--primary); }
 .ind-tabs { display: flex; gap: 6px; }
-.ind-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: min(296px, 38vh); overflow-y: auto; overscroll-behavior: contain; padding: 2px; margin: -2px; animation: fade-in .25s ease; }
+.ind-chips-wrap { position: relative; }
+.ind-chips-wrap .more-hint { height: 48px; padding-bottom: 2px; } /* 스크롤바 대신 '아래에 더 있어요'(.more-hint, global) */
+.ind-chips::-webkit-scrollbar { display: none; }
+.ind-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: min(296px, 38vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 2px; margin: -2px; animation: fade-in .25s ease; }
 .ind-chips .none { padding: 6px 2px; font-size: 13px; color: var(--muted); }
 /* 데스크톱: 칩은 되도록 스크롤 없이 다 보이게 — 화면 높이에서 드롭다운 위쪽(약 345px)만 빼고 쓴다. 900px 높이면 서비스업 47개(454px)도 한 번에, 더 낮은 화면만 안에서 스크롤 */
 @media (min-width: 900px) { .ind-chips { max-height: max(180px, calc(100dvh - 345px)); } }
@@ -69,10 +72,10 @@
 
 /* 상위 목록 */
 .search-list { display: flex; flex-direction: column; }
-.search-list .head { padding: 12px 16px 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: oklch(0.55 0.02 262); }
+.search-list .head { position: sticky; top: 0; z-index: 1; background: #fff; padding: 12px 16px 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: oklch(0.55 0.02 262); }
 .search-list .head b { font-size: 14px; color: var(--ink); }
 .search-list .row { border: none; border-bottom: 1px solid oklch(0.96 0.004 262); background: #fff; text-align: left; padding: 10px 16px; display: flex; align-items: center; gap: 12px; animation: sk-rise .3s var(--ease) both; }
-.search-list .row[aria-hidden] { animation: none; } /* 막대 줄은 바로 보이고, 값 줄만 옅은 데서 올라온다 */
+.search-list .row[aria-hidden], .search-list.calm .row { animation: none; } /* 막대 줄은 바로 보이고, 값 줄만 옅은 데서 올라온다 */
 .search-list .rank { flex: none; width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: oklch(0.95 0.006 262); color: oklch(0.45 0.02 262); }
 .search-list .rank.top { background: var(--primary-soft); color: var(--primary); } /* 3단계 동 목록처럼 1~3위는 연한 파랑 */
 .search-list .name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 12px; color: var(--muted); }
@@ -126,12 +129,15 @@
 .search-none > .round-btn { align-self: flex-start; }
 .search-none > b { font-size: 16px; color: var(--ink); }
 .search-none .near { align-self: stretch; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; text-align: left; }
-.search-none .near > span { font-size: 12px; font-weight: 700; color: var(--ink-3); }
-.search-none .near button { height: 48px; border: 1px solid oklch(0.92 0.006 262); border-radius: 12px; background: #fff; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); animation: fade-up .4s var(--ease-out) .1s backwards; }
-.search-none .near button + button { animation-delay: .16s; }
-.search-none .near b { font-size: 14px; color: var(--ink); margin-right: 4px; }
+.near > span { font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.near button { height: 48px; border: 1px solid oklch(0.92 0.006 262); border-radius: 12px; background: #fff; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); animation: fade-up .4s var(--ease-out) .1s backwards; }
+.near button + button { animation-delay: .16s; }
+.near b { font-size: 14px; color: var(--ink); margin-right: 4px; }
+.near .sc { font-size: 14px; color: var(--primary); }
+.search-result .near { display: flex; flex-direction: column; gap: 8px; } /* 동을 고른 카드: 지표 아래 빈 자리에 가장 가까운 동네 1곳 */
+@media (max-width: 899.98px) { .search-result .near { display: none; } } /* 모바일 시트는 높이가 모자라 스크롤이 생겨서 데스크톱만 */
 @media (hover: hover) {
-  .search-none .near button:hover { border-color: var(--primary); }
+  .near button:hover { border-color: var(--primary); }
 }
 
 @media (min-width: 900px) {
